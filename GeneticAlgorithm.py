@@ -71,9 +71,10 @@ class GeneticAlgorithmCache:
     def get_other(self, key: str, default=None):
         return self.ram_cache_other.get(key, default)
 
-    def set_score(self, data: dict, score: float):
+    def set_score(self, data: dict, score: float, generation: int):
         """Add a new row to the cache and append it to the file if using HardDisk."""
         data["score"] = score
+        data["generation"] = generation
         new_data = pd.DataFrame([data])
         self.ram_cache_score = pd.concat([self.ram_cache_score, new_data], ignore_index=True).drop_duplicates()
 
@@ -97,8 +98,15 @@ if __name__ == "__main__":
     )
 
     # Adding data to cache
-    cache.set_score({"col0": 1.1111111111111, "col1": 2.2222222222222, "col2": 3.3333333333333}, score=55)
-    cache.set_score({"col0": 4.4444444444444, "col1": 5.5555555555555, "col2": 6.6666666666666}, score=66)
+    cache.set_score(
+        {"col0": 1.1111111111111, "col1": 2.2222222222222, "col2": 3.3333333333333},
+        score=55,
+        generation=1)
+    cache.set_score(
+        {"col0": 4.4444444444444, "col1": 5.5555555555555, "col2": 6.6666666666666},
+        score=66,
+        generation=2
+    )
     cache.set_other("test1", 1)
     cache.set_other("test2", 2)
 
@@ -134,11 +142,9 @@ class GeneticAlgorithm:
             seed=0,
             verbose=0,
             number_of_workers=-1,
-            is_plot=False,
             server_start_port=5000
     ) -> None:
         self.population = None
-        self._objectives_df = None
         self._last_generation_with_new_best = None
         self._setup_random_instances(seed)
         self._cache = GeneticAlgorithmCache(
@@ -187,8 +193,6 @@ class GeneticAlgorithm:
         self._init_environment_decode()
         self.start_datetime = to_datetime(time.time(), unit="s")
         self._number_of_workers = number_of_workers
-        self._is_plot = is_plot
-        self._objectives_df_datas = []
         self._current_generation = 0
         self._lock = threading.Lock()
         self.plot_index = 0
@@ -212,23 +216,16 @@ class GeneticAlgorithm:
         if scores is not None:
             if self.verbose >= 3:
                 Logger.log_m("read cache ->", str(objective_input))
-            if self._is_plot:
-                data = []
-                for key in objective_input:
-                    data.append(objective_input[key])
-                data.append(scores[str(objective_input)])
-                data.append(self._current_generation)
-                self._objectives_df_datas.append(data)
             return scores[str(objective_input)]
         if not objective_input:
             if self._comparison_type == GeneticAlgorithmComparisonType.maximize:
-                self._cache.set_score(objective_input, -np.inf)
+                self._cache.set_score(objective_input, -np.inf, self._current_generation)
                 return -np.inf
             elif self._comparison_type == GeneticAlgorithmComparisonType.minimize:
-                self._cache.set_score(objective_input, np.inf)
+                self._cache.set_score(objective_input, np.inf, self._current_generation)
                 return np.inf
             else:
-                self._cache.set_score(objective_input, 0)
+                self._cache.set_score(objective_input, 0, self._current_generation)
                 return 0
         if self.verbose >= 2:
             Logger.log_m("_" * 60)
@@ -249,14 +246,7 @@ class GeneticAlgorithm:
             Logger.log_m("objective result is :", objective_result)
         if self.verbose >= 2:
             Logger.log_m("_" * 60)
-        self._cache.set_score(objective_input, objective_result)
-        if self._is_plot:
-            data = []
-            for key in objective_input:
-                data.append(objective_input[key])
-            data.append(objective_result)
-            data.append(self._current_generation)
-            self._objectives_df_datas.append(data)
+        self._cache.set_score(objective_input, objective_result, self._current_generation)
         return objective_result
 
     def _concurrent_objective(self, worker, task_queue):
@@ -274,25 +264,18 @@ class GeneticAlgorithm:
                     if cache_result is not None:
                         if self.verbose >= 3:
                             Logger.log_m("read cache ->", str(objective_input))
-                        if self._is_plot:
-                            data = []
-                            for key in objective_input:
-                                data.append(objective_input[key])
-                            data.append(cache_result)
-                            data.append(self._current_generation)
-                            self._objectives_df_datas.append(data)
                         yield chromosome, cache_result
                         continue
                     else:
                         if not objective_input:
                             if self._comparison_type == GeneticAlgorithmComparisonType.maximize:
-                                self._cache.set_score(objective_input, -np.inf)
+                                self._cache.set_score(objective_input, -np.inf, self._current_generation)
                                 yield chromosome, -np.inf
                             elif self._comparison_type == GeneticAlgorithmComparisonType.minimize:
-                                self._cache.set_score(objective_input, np.inf)
+                                self._cache.set_score(objective_input, np.inf, self._current_generation)
                                 yield chromosome, np.inf
                             else:
-                                self._cache.set_score(objective_input, 0)
+                                self._cache.set_score(objective_input, 0, self._current_generation)
                                 yield chromosome, 0
                             continue
                         if self.verbose >= 2:
@@ -311,18 +294,11 @@ class GeneticAlgorithm:
                     self._cache.set_other("count_of_run_objective",
                                           self._cache.get_other("count_of_run_objective", 0) + 1)
                     if self.verbose >= 1:
-                        Logger.log_m(f"{worker['port']}> objective {this_count_of_run_objective} result is :",
+                        Logger.log_m(f"{worker['port']}> objective {this_count_of_run_objective} result is: ",
                                      objective_result)
                     if self.verbose >= 2:
                         Logger.log_m("_" * 60)
-                    self._cache.set_score(objective_input, objective_result)
-                    if self._is_plot:
-                        data = []
-                        for key in objective_input:
-                            data.append(objective_input[key])
-                        data.append(objective_result)
-                        data.append(self._current_generation)
-                        self._objectives_df_datas.append(data)
+                    self._cache.set_score(objective_input, objective_result, self._current_generation)
                     yield chromosome, objective_result
             except KeyboardInterrupt as e:
                 raise e
@@ -377,7 +353,8 @@ class GeneticAlgorithm:
             return population[selection_ix]
         except KeyboardInterrupt as e:
             raise e
-        except:
+        except Exception as e:
+            Logger.log_e(e)
             selection_ix = self._np_random_generator.integers(len(population))
             for ix in self._np_random_generator.choice(len(population), self._tournament_selection_number,
                                                        replace=True):
@@ -395,7 +372,8 @@ class GeneticAlgorithm:
             return population_scores[selection_ix][0]
         except KeyboardInterrupt as e:
             raise e
-        except:
+        except Exception as e:
+            Logger.log_e(e)
             selection_ix = self._np_random_generator.integers(len(population_scores))
             for ix in self._np_random_generator.choice(len(population_scores), self._tournament_selection_number,
                                                        replace=True):
@@ -473,7 +451,7 @@ class GeneticAlgorithm:
                 Logger.log_m(">>>generation :", self._current_generation, "/", self._number_of_generations)
             chromosome_decode = self._decode(best_chromosome)
             if self.verbose >= 0:
-                Logger.log_m("Best => ", chromosome_decode, f"With Score : {best_chromosome_score}")
+                Logger.log_m("Best => ", chromosome_decode, f"With Score: {best_chromosome_score}")
             scores = []
             for chromosome in self.population:
                 score = self._objective(chromosome)
@@ -525,7 +503,7 @@ class GeneticAlgorithm:
             else:
                 chromosome_decode = None
             if self.verbose >= 0:
-                Logger.log_m("Best => ", chromosome_decode, f"With Score : {best_chromosome_score}")
+                Logger.log_m("Best => ", chromosome_decode, f"With Score: {best_chromosome_score}")
             for chromosome in self.population:
                 task_queue.put(chromosome)
             with concurrent.futures.ThreadPoolExecutor(max_workers=self._number_of_workers) as executor:
@@ -574,12 +552,6 @@ class GeneticAlgorithm:
                 "score": result[1]
             }
         )
-        if self._is_plot:
-            columns = list(self._environment.keys())
-            columns.append("score")
-            columns.append("generation")
-            self._objectives_df = pd.DataFrame(self._objectives_df_datas, columns=columns)
-            self._objectives_df.to_csv(f"./cache/{self._cache._optimizer_name}.csv", index=False)
         if not self.verbose >= 0:
             return result
         count_of_run_objective = self._cache.get_other("count_of_run_objective", 0)
@@ -598,36 +570,35 @@ class GeneticAlgorithm:
         return result
 
     def plot(self):
-        if not self._is_plot:
-            raise Exception("please set is_plot pram to True in order to display plots")
-        if self._objectives_df is None:
-            self._objectives_df = pd.read_csv(f"./cache/{self._cache._optimizer_name}.csv")
         try:
             self.plot_best_score()
-        except:
-            pass
+        except Exception as e:
+            Logger.log_e(e)
         try:
             self.plot_parameter_values_for_the_best_scores()
-        except:
-            pass
+        except Exception as e:
+            Logger.log_e(e)
         try:
             self.plot_population_diversity()
-        except:
-            pass
+        except Exception as e:
+            Logger.log_e(e)
         try:
             self.plot_gene_frequencies()
-        except:
-            pass
+        except Exception as e:
+            Logger.log_e(e)
         try:
             self.feature_plots()
-        except:
-            pass
+        except Exception as e:
+            Logger.log_e(e)
 
     def plot_best_score(self):
+        df = self._cache.ram_cache_score
         if self._comparison_type == GeneticAlgorithmComparisonType.maximize:
-            best_scores = self._objectives_df.groupby('generation')['score'].max()
+            best_scores = df.groupby('generation')['score'].max()
         elif self._comparison_type == GeneticAlgorithmComparisonType.minimize:
-            best_scores = self._objectives_df.groupby('generation')['score'].min()
+            best_scores = df.groupby('generation')['score'].min()
+        else:
+            raise Exception("unknown GeneticAlgorithmComparisonType", str(self._comparison_type))
         plt.plot(best_scores.index, best_scores.values)
         plt.title('Best Score over Generations')
         plt.xlabel('Generation')
@@ -638,26 +609,29 @@ class GeneticAlgorithm:
         self.plot_index += 1
 
     def plot_parameter_values_for_the_best_scores(self):
-        parameters = list(self._objectives_df.columns[:-2])
+        df = self._cache.ram_cache_score
+        parameters = list(df.columns[:-2])
         for param in parameters:
             if self._comparison_type == GeneticAlgorithmComparisonType.maximize:
                 best_params = [
-                    self._objectives_df.loc[
-                        self._objectives_df[
-                            self._objectives_df['generation'] == generation
+                    df.loc[
+                        df[
+                            df['generation'] == generation
                             ]["score"].idxmax()
                     ][param]
                     for generation in range(self._number_of_generations)
                 ]
             elif self._comparison_type == GeneticAlgorithmComparisonType.minimize:
                 best_params = [
-                    self._objectives_df.loc[
-                        self._objectives_df[
-                            self._objectives_df['generation'] == generation
+                    df.loc[
+                        df[
+                            df['generation'] == generation
                             ]["score"].idxmin()
                     ][param]
                     for generation in range(self._number_of_generations)
                 ]
+            else:
+                raise Exception("unknown GeneticAlgorithmComparisonType", str(self._comparison_type))
             plt.plot(best_params)
             plt.title(f'Best {param} over Generations')
             plt.xlabel('Generation')
@@ -668,8 +642,9 @@ class GeneticAlgorithm:
             self.plot_index += 1
 
     def plot_population_diversity(self):
+        df = self._cache.ram_cache_score
         diversities = [
-            calculate_diversity(self._objectives_df[self._objectives_df['generation'] == generation].values)
+            calculate_diversity(df[df['generation'] == generation].values)
             for generation in range(self._number_of_generations)
         ]
         plt.plot(diversities)
@@ -682,8 +657,9 @@ class GeneticAlgorithm:
         self.plot_index += 1
 
     def plot_gene_frequencies(self):
-        gene_frequencies = self._objectives_df.groupby('generation')[
-            self._objectives_df.columns[:-2]
+        df = self._cache.ram_cache_score
+        gene_frequencies = df.groupby('generation')[
+            df.columns[:-2]
         ].apply(lambda x: x.mean())
         gene_frequencies = (gene_frequencies - gene_frequencies.min()) / (
                 gene_frequencies.max() - gene_frequencies.min())
@@ -697,26 +673,27 @@ class GeneticAlgorithm:
         self.plot_index += 1
 
     def feature_plots(self):
-        df = self._objectives_df.drop(self._objectives_df.columns[-1:], axis=1)
-        features = self._objectives_df.columns[:-2]
-        target = self._objectives_df.columns[-2]
-        df.replace([-np.inf], np.NaN, inplace=True)
-        df.dropna(axis=0, inplace=True)
+        df = self._cache.ram_cache_score
+        data = df.drop(df.columns[-1:], axis=1)
+        features = df.columns[:-2]
+        target = df.columns[-2]
+        data.replace([-np.inf], np.NaN, inplace=True)
+        data.dropna(axis=0, inplace=True)
 
-        df.columns = df.columns.map(lambda s: s.replace("_", " "))
+        data.columns = data.columns.map(lambda s: s.replace("_", " "))
         temp = []
         for f in features:
             temp.append(f.replace("_", " "))
         features = temp
 
         plt.title(f"pairwise correlation with {target}")
-        df.corrwith(df[target], method="spearman").sort_values().plot(kind="barh")
+        data.corrwith(data[target], method="spearman").sort_values().plot(kind="barh")
         plt.tight_layout()
         plt.savefig(f"./cache/{self.plot_index}.png", dpi=DPI)
         plt.close()
         self.plot_index += 1
 
-        sns.heatmap(df.corr(method="spearman"), annot=True, cmap="RdBu")
+        sns.heatmap(data.corr(method="spearman"), annot=True, cmap="RdBu")
         plt.tight_layout()
         plt.savefig(f"./cache/{self.plot_index}.png", dpi=DPI)
         plt.close()
@@ -726,8 +703,8 @@ class GeneticAlgorithm:
             verbose=1000,
             loss_function='RMSE'
         )
-        X = df[features]
-        y = df[target]
+        X = data[features]
+        y = data[target]
         model.fit(
             X=X,
             y=y
@@ -763,23 +740,23 @@ class GeneticAlgorithm:
 
         for f in features:
             plt.title(f"hist plot {f}")
-            sns.histplot(df[f], bins=20)
+            sns.histplot(data[f], bins=20)
             plt.tight_layout()
             plt.savefig(f"./cache/{self.plot_index}.png", dpi=DPI)
             plt.close()
             self.plot_index += 1
 
         for f in features:
-            sns.jointplot(x=df[f], y=df[target], kind='kde', color="red", fill=True)
+            sns.jointplot(x=data[f], y=data[target], kind='kde', color="red", fill=True)
             plt.tight_layout()
             plt.savefig(f"./cache/{self.plot_index}.png", dpi=DPI)
             plt.close()
             self.plot_index += 1
 
         for f in features:
-            plt.scatter(x=df[[f]], y=df[target])
-            slope, intercept = np.polyfit(df[f].values, df[target].values, 1)
-            x_range = np.linspace(df[f].min(), df[f].max(), 100)
+            plt.scatter(x=data[[f]], y=data[target])
+            slope, intercept = np.polyfit(data[f].values, data[target].values, 1)
+            x_range = np.linspace(data[f].min(), data[f].max(), 100)
             y_range = slope * x_range + intercept
             plt.plot(x_range, y_range, color='red')
             plt.title(f"{f} regression line plot")
@@ -795,7 +772,7 @@ class GeneticAlgorithm:
                 if ff1 == ff2 or ff1.lower() > ff2.lower():
                     continue
 
-                sns.scatterplot(x=df[ff1], y=df[ff2], hue=df[target])
+                sns.scatterplot(x=data[ff1], y=data[ff2], hue=data[target])
                 plt.title(f"{ff1} & {ff2} & {target} scatterplot", size=20)
                 plt.tight_layout()
                 plt.savefig(f"./cache/{self.plot_index}.png", dpi=DPI)
