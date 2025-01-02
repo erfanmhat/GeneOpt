@@ -130,3 +130,20 @@ def copy_and_replace_file(source, destination, verbose=1):
         print(f"{source} not found.")
     except Exception as e:
         print(str(e))
+
+
+def collect_results(generator):
+    return list(generator)
+
+
+def calculate_diversity(population: np.ndarray):
+    n = len(population)
+    if n <= 1:
+        return 1
+
+    # Calculate the Hamming distances using broadcasting
+    diff_matrix = np.triu(np.sum(population[:, None, :] != population[None, :, :], axis=2), 1)
+    total_distance = np.sum(diff_matrix)
+
+    average_distance = total_distance / (n * (n - 1) / 2)
+    return average_distance
