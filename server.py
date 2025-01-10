@@ -1,14 +1,16 @@
 import sys
 import time
 
+import numpy as np
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 
-def objective_func(a, b, c):
+def holder_table(x1, x2):
     time.sleep(0.2)
-    return (a - 5) ** 2 + (b - 20) ** 2 + (c - 33.33) ** 4
+    X = (x1, x2)
+    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
 
 
 @app.route('/run_objective', methods=['GET'])
@@ -21,7 +23,7 @@ def run_objective():
         res.status_code = 400
         return res
 
-    return jsonify({"data": objective_func(**parameters)})
+    return jsonify({"data": holder_table(**parameters)})
 
 
 if __name__ == '__main__':

@@ -3,20 +3,20 @@ import numpy as np
 from GeneOpt import GeneticAlgorithm, GeneticAlgorithmComparisonType, GeneticAlgorithmCacheType, Logger
 
 
-def run_objective_func(a, b, c):
-    return a + b + c
+def holder_table(x1, x2):
+    X = (x1, x2)
+    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
 
 
 if __name__ == "__main__":
     environment = {
-        "a": np.linspace(0, 100, 1024),
-        "b": np.linspace(0, 100, 1024),
-        "c": np.linspace(0, 100, 1024)
+        "x1": np.linspace(-10, 10, 2 ** 12),
+        "x2": np.linspace(-10, 10, 2 ** 12)
     }
     genetic_algorithm = GeneticAlgorithm(
-        objective_func=run_objective_func,
-        comparison_type=GeneticAlgorithmComparisonType.maximize,
-        optimizer_name="test_op",
+        objective_func=holder_table,
+        comparison_type=GeneticAlgorithmComparisonType.minimize,
+        optimizer_name="op_holder_table",
         environment=environment,
         seed=42,
         mutation_rate=0.06,

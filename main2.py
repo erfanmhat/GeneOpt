@@ -34,9 +34,8 @@ def run_async_objective_func(port, **parameters):
 
 if __name__ == "__main__":
     environment = {
-        "a": np.linspace(0, 100, 1024),
-        "b": np.linspace(0, 100, 1024),
-        "c": np.linspace(0, 100, 1024)
+        "x1": np.linspace(-10, 10, 2 ** 12),
+        "x2": np.linspace(-10, 10, 2 ** 12)
     }
     genetic_algorithm = GeneticAlgorithm(
         objective_func=run_async_objective_func,

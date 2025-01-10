@@ -1,7 +1,16 @@
 Metadata-Version: 2.1
 Name: GeneOpt
-Version: 1.0.0
+Version: 1.0.10
+Summary: A library for genetic optimization
+Home-page: https://github.com/erfanmhat/GeneOpt
+Author: Erfan Mahdavi Athar
+Author-email: erfan.mh.at@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
 Description-Content-Type: text/markdown
+License-File: LICENSE
 Requires-Dist: numpy>=1.21.0
 Requires-Dist: pandas>=1.3.0
 Requires-Dist: matplotlib>=3.4.0
@@ -44,26 +53,24 @@ This example demonstrates using GeneOpt to optimize a function locally:
 
 ```python
 import numpy as np
+
 from GeneOpt import GeneticAlgorithm, GeneticAlgorithmComparisonType, GeneticAlgorithmCacheType, Logger
 
 
-def objective_function(a, b, c):
-    return a + b + c
+def holder_table(x1, x2):
+    X = (x1, x2)
+    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
 
 
 if __name__ == "__main__":
-    # Define the search space
     environment = {
-        "a": np.linspace(0, 100, 1024),
-        "b": np.linspace(0, 100, 1024),
-        "c": np.linspace(0, 100, 1024)
+        "x1": np.linspace(-10, 10, 2 ** 12),
+        "x2": np.linspace(-10, 10, 2 ** 12)
     }
-
-    # Initialize the genetic algorithm
     genetic_algorithm = GeneticAlgorithm(
-        objective_func=objective_function,
-        comparison_type=GeneticAlgorithmComparisonType.maximize,
-        optimizer_name="test_optimizer",
+        objective_func=holder_table,
+        comparison_type=GeneticAlgorithmComparisonType.minimize,
+        optimizer_name="op_holder_table",
         environment=environment,
         seed=42,
         mutation_rate=0.06,
@@ -72,23 +79,13 @@ if __name__ == "__main__":
         r_cross=0.63,
         start_number_of_population=100,
         tournament_selection_number=4,
-        cache_type=GeneticAlgorithmCacheType.Ram,
+        cache_type=GeneticAlgorithmCacheType.HardDisk,
         verbose=1
     )
-
-    # Run the genetic algorithm
-    best_solution, best_score = genetic_algorithm.start()
-
-    # Log results
-    Logger.log_m("Optimization Complete!")
-    Logger.log_m(f"Best Solution: {best_solution}, Best Score: {best_score}")
-
-    # Plot results
-    genetic_algorithm.plot_best_score()
-    genetic_algorithm.plot_parameter_values_for_the_best_scores()
-    genetic_algorithm.plot_population_diversity()
-    genetic_algorithm.plot_gene_frequencies()
-    genetic_algorithm.feature_plots()
+    best, score = genetic_algorithm.start()
+    Logger.log_m("Done!")
+    Logger.log_m(f"{best} = {score}")
+    genetic_algorithm.plot()
 ```
 
 ### Outputs
@@ -102,38 +99,38 @@ GeneOpt provides a variety of detailed plots to understand the algorithm's perfo
 
 ### 1. Best Score Over Generations
 Plots the best score achieved in each generation.
-![Best Score Over Generations Image](./image/best_score_over_generations.png)
+![Best Score Over Generations Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/best_score_over_generations.png)
 
 ### 2. Best Parameter Values Over Generations
 Shows the evolution of parameters contributing to the best scores.
-![Best Parameter a Value Over Generations Image](./image/best_parameter_a_value_over_generations.png)
+![Best Parameter a Value Over Generations Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/best_parameter_x2_value_over_generations.png)
 
 ### 3. Population Diversity
 Illustrates the diversity within the population for each generation.
-![Population Diversity Image](./image/population_diversity.png)
+![Population Diversity Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/population_diversity.png)
 
 ### 4. Gene Frequencies
 Displays the frequency of genes across generations using a heatmap.
-![Gene Frequencies Image](./image/gene_frequencies.png)
+![Gene Frequencies Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/gene_frequencies.png)
 
 ### 5. Feature Analysis
 Includes:
 - Pairwise correlation with score.
-![Pairwise correlation with score Image](./image/pairwise_correlation_with_score.png)
+![Pairwise correlation with score Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/pairwise_correlation_with_score.png)
 - Pairwise correlation of features.
-![Pairwise correlation of features Image](./image/pairwise_correlation_of_features.png)
+![Pairwise correlation of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/pairwise_correlation_of_features.png)
 - Predicted vs Actual values using regression.
-![Predicted vs Actual values using regression Image](./image/predicted_vs_actual_values_using_regression.png)
+![Predicted vs Actual values using regression Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/predicted_vs_actual_values_using_regression.png)
 - Feature importance analysis.
-![Feature importance analysis Image](./image/feature_importance_analysis.png)
+![Feature importance analysis Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/feature_importance_analysis.png)
 - Histograms plot of features.
-![Histograms plot of features Image](./image/histograms_plot_of_features.png)
+![Histograms plot of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/histograms_plot_of_features.png)
 - scatter plot of features.
-![scatter plot of features Image](./image/scatter_plot_of_features.png)
+![scatter plot of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/scatter_plot_of_features.png)
 - KDE plot of features.
-![KDE plot of features](./image/kde_plot_of_features.png)
+![KDE plot of features](https://github.com/erfanmhat/GeneOpt/blob/master/image/kde_plot_of_features.png)
 - Parameter and Parameter and score scatter plots
-![Parameter and Parameter and score scatter plots Image](./image/parameter_and_parameter_and_score_scatter_plots.png)
+![Parameter and Parameter and score scatter plots Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/parameter_and_parameter_and_score_scatter_plots.png)
 
 ## Distributed Optimization with GeneOpt
 
@@ -151,12 +148,19 @@ The server evaluates the objective function via HTTP GET requests.
 
 ```python
 import sys
+import time
+
+import numpy as np
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-def objective_func(a, b, c):
-    return (a - 5) ** 2 + (b - 20) ** 2 + (c - 33.33) ** 4
+
+def holder_table(x1, x2):
+    time.sleep(0.2) # Simulate CPU-limited task
+    X = (x1, x2)
+    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
+
 
 @app.route('/run_objective', methods=['GET'])
 def run_objective():
@@ -168,7 +172,8 @@ def run_objective():
         res.status_code = 400
         return res
 
-    return jsonify({"data": objective_func(**parameters)})
+    return jsonify({"data": holder_table(**parameters)})
+
 
 if __name__ == '__main__':
     app.run(
@@ -236,9 +241,8 @@ def run_async_objective_func(port, **parameters):
 
 if __name__ == "__main__":
     environment = {
-        "a": np.linspace(0, 100, 1024),
-        "b": np.linspace(0, 100, 1024),
-        "c": np.linspace(0, 100, 1024)
+        "x1": np.linspace(-10, 10, 2 ** 12),
+        "x2": np.linspace(-10, 10, 2 ** 12)
     }
     genetic_algorithm = GeneticAlgorithm(
         objective_func=run_async_objective_func,
@@ -310,7 +314,7 @@ This distributed setup allows GeneOpt to scale across multiple servers, making i
 | `tournament_selection_number` | Number of candidates in tournament selection.                                               |
 | `cache_type`                  | Choose `Ram` or `HardDisk` for caching.                                                     |
 | `verbose`                     | Verbosity level for logging (-1 for no logging, 0 for minimal, up to 3 for maximum detail). |
-| number_of_workers             | Number of worker servers (default is -1, meaning no workers are used).                      |
+| `number_of_workers`           | Number of worker servers (default is -1, meaning no workers are used).                      |
 
 ## Requirements
 

@@ -536,7 +536,7 @@ class GeneticAlgorithm:
 
                     best_params.append(df.loc[best_index][param])
 
-            plt.plot(best_params)
+            plt.plot(best_params, marker='o')
             plt.title(f'Best {param} over Generations')
             plt.xlabel('Generation')
             plt.ylabel(f'Best {param}')
