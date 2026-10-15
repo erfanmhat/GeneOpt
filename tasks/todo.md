@@ -40,9 +40,9 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 4: GeneticAlgorithm — sequential run
 **Description:** `GeneticAlgorithm(objective_func, environment, *, …)` with the 005 §1 signature minus `executor`/`on_error` (Task 5). Construction-time validation (005 §2). Integer genomes, uniform init, crossover by gene mask, single-gate mutation with creep for ordered numeric params, adaptive rate from normalised diversity, exact-k tournament, elitism, `sign` comparisons, early stopping `>=`, `target_score` checked per generation (003, 010). The loop goes through the cache with in-generation dedupe and appends to the history. `start()` returns `Result` and sets `ga.result`/`ga.history`.
 **Acceptance criteria:**
-- [ ] Every 1.x kwarg in 011 raises `TypeError`. Bad inputs raise with the parameter name
-- [ ] 20 identical genomes → 1 objective call (GC-7). The history has pop rows for every generation (H-1). Init over 5 values is uniform (E-1)
-- [ ] Convergence: a 2-D bowl optimum and a categorical toy optimum are found within budget. Elitism → monotonic best. `population_size=101` is kept. Warm disk cache rerun → 0 calls, same result
+- [x] Every 1.x kwarg in 011 raises `TypeError`. Bad inputs raise with the parameter name
+- [x] 20 identical genomes → 1 objective call (GC-7). The history has pop rows for every generation (H-1). Init over 5 values is uniform (E-1)
+- [x] Convergence: a 2-D bowl optimum and a categorical toy optimum are found within budget. Elitism → monotonic best. `population_size=101` is kept. Warm disk cache rerun → 0 calls, same result
 **Verification:** `pytest tests/test_core.py tests/test_api.py`
 **Dependencies:** 2, 3
 **Files:** `geneopt/core.py`, `geneopt/__init__.py`, `tests/test_core.py`, `tests/test_api.py`

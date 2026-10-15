@@ -37,7 +37,7 @@ package is deleted only in the final task.
 
 ### Phase 2: Core
 - [x] Task 3: `History` + `Result` types
-- [ ] Task 4: `GeneticAlgorithm` sequential run (integer genomes, operators, validation)
+- [x] Task 4: `GeneticAlgorithm` sequential run (integer genomes, operators, validation)
 - [ ] Task 5: Executor + `on_error` policy + logging
 
 ### Checkpoint B
