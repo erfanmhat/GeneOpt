@@ -16,8 +16,8 @@ import client  # noqa: E402
 import quickstart  # noqa: E402
 import server  # noqa: E402
 
-
 # --- stub objective server ----------------------------------------------------
+
 
 class Stub:
     """A stdlib HTTP server that answers each request with the next (status, body) in ``replies``
@@ -32,7 +32,10 @@ class Stub:
                 query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(self.path).query))
                 stub.requests.append(query)
                 if stub.replies is None:
-                    status, body = 200, {"score": server.objective(**{k: json.loads(v) for k, v in query.items()})}
+                    status, body = (
+                        200,
+                        {"score": server.objective(**{k: json.loads(v) for k, v in query.items()})},
+                    )
                 else:
                     status, body = stub.replies[min(len(stub.requests), len(stub.replies)) - 1]
                 payload = json.dumps(body).encode()
@@ -62,6 +65,7 @@ def no_sleep(monkeypatch):
 
 
 # --- client (spec 008) --------------------------------------------------------
+
 
 def test_X_1_zero_score_is_returned_on_first_request(no_sleep):
     stub = Stub([(200, {"score": 0.0})])
@@ -104,6 +108,7 @@ def test_values_are_json_encoded_in_the_query():
     stub = Stub([(200, {"score": 1.0})])
     try:
         import numpy as np
+
         client.remote_score(stub.port, {"act": "relu", "n": np.int64(3), "lr": np.float64(0.01)})
         assert stub.requests[0] == {"act": '"relu"', "n": "3", "lr": "0.01"}
     finally:
@@ -123,15 +128,19 @@ def test_distributed_run_end_to_end_against_stub_servers():
 
 # --- server (spec 009) --------------------------------------------------------
 
+
 def test_server_parses_json_values():
     assert server.parse_params({"x1": "0.5", "x2": "-3"}) == {"x1": 0.5, "x2": -3}
 
 
-@pytest.mark.parametrize("args, match", [
-    ({"x1": "0.5"}, "missing"),
-    ({"x1": "0.5", "x2": "1", "evil": "1"}, "unknown"),
-    ({"x1": "0.5", "x2": "not json"}, "x2"),
-])
+@pytest.mark.parametrize(
+    "args, match",
+    [
+        ({"x1": "0.5"}, "missing"),
+        ({"x1": "0.5", "x2": "1", "evil": "1"}, "unknown"),
+        ({"x1": "0.5", "x2": "not json"}, "x2"),
+    ],
+)
 def test_server_rejects_bad_parameters(args, match):
     with pytest.raises(ValueError, match=match):
         server.parse_params(args)
@@ -143,6 +152,7 @@ def test_X_2_no_example_enables_debug_mode():
 
 
 # --- runnable examples --------------------------------------------------------
+
 
 @pytest.mark.plots  # the quickstart writes plots
 def test_quickstart_runs(tmp_path, monkeypatch):

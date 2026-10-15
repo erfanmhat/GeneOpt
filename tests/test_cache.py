@@ -97,10 +97,10 @@ def obj_b(x):
 
 def test_GC_3_fingerprint_changes_with_env_objective_and_version():
     base = fingerprint(ENV, obj_a)
-    assert base == fingerprint({"x": [0.0, 0.5, 1.0]}, obj_a)          # stable
-    assert base != fingerprint({"x": [0.0, 0.5, 2.0]}, obj_a)          # values changed
+    assert base == fingerprint({"x": [0.0, 0.5, 1.0]}, obj_a)  # stable
+    assert base != fingerprint({"x": [0.0, 0.5, 2.0]}, obj_a)  # values changed
     assert base != fingerprint({"x": [0.0, 0.5, 1.0], "y": [1]}, obj_a)  # GC-2: param added
-    assert base != fingerprint(ENV, obj_b)                              # objective body changed
+    assert base != fingerprint(ENV, obj_b)  # objective body changed
     assert base != fingerprint(ENV, obj_a, objective_version="2")
 
 
@@ -116,19 +116,24 @@ def test_fingerprint_sees_called_function_names():
 
 def test_fingerprint_is_stable_across_processes_for_nested_code():
     # repr() of a nested code object contains a memory address; the digest must not
-    import subprocess, sys
+    import subprocess
+    import sys
+
     code = (
         "from geneopt.cache import fingerprint\n"
         "def f(x):\n    return (lambda y: y + 1)(x)\n"
         "print(fingerprint({'x': [1, 2]}, f))"
     )
-    outs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
-                           check=True).stdout for _ in range(2)}
+    outs = {
+        subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True).stdout
+        for _ in range(2)
+    }
     assert len(outs) == 1
 
 
 def test_fingerprint_handles_callables_without_code():
     import functools
+
     fp = fingerprint(ENV, functools.partial(obj_a))
     assert isinstance(fp, str) and len(fp) == 16
 

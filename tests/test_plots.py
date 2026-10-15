@@ -52,9 +52,21 @@ def test_plot_writes_named_pngs(tmp_path):
     out = ga.plot(output_dir=tmp_path, dpi=50)
     errors = {name: e for name, e in out.items() if isinstance(e, Exception)}
     assert not errors
-    for name in ("best_score", "diversity", "cache_hit_rate", "param_x", "param_act", "gene_freq_act",
-                 "corr_with_score", "corr_matrix", "hist_x", "regression_y", "scatter_x_y",
-                 "predicted_vs_actual", "feature_importance"):
+    for name in (
+        "best_score",
+        "diversity",
+        "cache_hit_rate",
+        "param_x",
+        "param_act",
+        "gene_freq_act",
+        "corr_with_score",
+        "corr_matrix",
+        "hist_x",
+        "regression_y",
+        "scatter_x_y",
+        "predicted_vs_actual",
+        "feature_importance",
+    ):
         path = tmp_path / f"{name}.png"
         assert out[name] == path and path.stat().st_size > 0, name
 
@@ -62,8 +74,9 @@ def test_plot_writes_named_pngs(tmp_path):
 def test_default_output_dir_is_per_optimizer(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     a = GeneticAlgorithm(objective, ENV, optimizer_name="a", population_size=6, generations=2)
-    b = GeneticAlgorithm(objective, ENV, optimizer_name="b", population_size=6, generations=2,
-                         cache_dir=tmp_path / "cache")
+    b = GeneticAlgorithm(
+        objective, ENV, optimizer_name="b", population_size=6, generations=2, cache_dir=tmp_path / "cache"
+    )
     a.start(), b.start()
     assert a.plot(dpi=30)["best_score"] == tmp_path / "a-plots" / "best_score.png"
     assert b.plot(dpi=30)["best_score"] == tmp_path / "cache" / "b-plots" / "best_score.png"

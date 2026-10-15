@@ -18,16 +18,16 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 2: Lint & types
 **Description:** Configure ruff (lint + format, line length 110) and mypy for `geneopt` in pyproject. Add `geneopt/py.typed` and include it in the wheel. Fix every finding without suppressions; if a suppression is unavoidable, it gets an inline reason.
 **Acceptance criteria:**
-- [ ] `ruff check .`, `ruff format --check .` and `mypy geneopt` exit 0
-- [ ] The wheel contains `geneopt/py.typed`
-- [ ] Test suite still green
+- [x] `ruff check .`, `ruff format --check .` and `mypy geneopt` exit 0
+- [x] The wheel contains `geneopt/py.typed`
+- [x] Test suite still green
 **Verification:** scratch venv with `.[dev]`
 **Dependencies:** 1
 **Files:** `pyproject.toml`, `geneopt/*.py`, `geneopt/py.typed`, `tests/*.py`, `examples/**` (format only)
 **Scope:** M
 
 ## Checkpoint A
-- [ ] Core suite green numpy-only. Lint and types clean
+- [x] Core suite green numpy-only. Lint and types clean
 
 ## Task 3: Ledger coverage + property tests
 **Description:** `tests/test_ledger.py` parses the ledger IDs from `specs/README.md` and requires a `test_<ID>_*` for each one (ID with `-` → `_`). Rename existing tests that already cover an ID, and add missing ones (GC-2, 4, 5, 6, 8, 11, H-2, 3, 5, E-2, 3, 4, 5, A-1, 2, 3, 4, X-3). Hypothesis tests: best-so-far monotonic over seeds, cache round-trip of arbitrary JSON-able values, uniform initial sampling for sizes 2..300 (chi-square).

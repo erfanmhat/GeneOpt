@@ -34,10 +34,10 @@ Make the 2.0 test suite meet spec 007:
 
 ### Phase 1: Suite structure
 - [x] Task 1: `plots` marker; core suite passes with numpy + pytest only
-- [ ] Task 2: ruff + mypy config, `py.typed`, findings fixed
+- [x] Task 2: ruff + mypy config, `py.typed`, findings fixed
 
 ### Checkpoint A
-- [ ] Core suite green in a numpy-only venv. `ruff check`, `ruff format --check`, `mypy geneopt` clean
+- [x] Core suite green in a numpy-only venv. `ruff check`, `ruff format --check`, `mypy geneopt` clean
 
 ### Phase 2: Coverage of the ledger
 - [ ] Task 3: Ledger meta-test + a named test for every bug ID + hypothesis property tests

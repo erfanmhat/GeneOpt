@@ -3,6 +3,7 @@
 Each executor thread borrows a free port, calls the server and returns the port,
 so every server evaluates one genome at a time.
 """
+
 import json
 import logging
 import queue
@@ -23,8 +24,9 @@ class ObjectiveError(RuntimeError):
 
 
 def remote_score(port: int, params: dict, retries: int = 3, timeout: float = 1800) -> float:
-    query = urllib.parse.urlencode({k: json.dumps(v.item() if isinstance(v, np.generic) else v)
-                                    for k, v in params.items()})
+    query = urllib.parse.urlencode(
+        {k: json.dumps(v.item() if isinstance(v, np.generic) else v) for k, v in params.items()}
+    )
     url = f"http://127.0.0.1:{port}/run_objective?{query}"
     for attempt in range(retries + 1):
         try:
@@ -37,7 +39,7 @@ def remote_score(port: int, params: dict, retries: int = 3, timeout: float = 180
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             error = e
         if attempt < retries:
-            time.sleep(min(2 ** attempt, 30))
+            time.sleep(min(2**attempt, 30))
     raise ObjectiveError(f"gave up after {retries + 1} attempts for {params}") from error
 
 
@@ -54,13 +56,20 @@ def main(ports, generations=100, population_size=100):
             free_ports.put(port)
 
     environment = {
-        "x1": np.linspace(-10, 10, 2 ** 12),
-        "x2": np.linspace(-10, 10, 2 ** 12),
+        "x1": np.linspace(-10, 10, 2**12),
+        "x2": np.linspace(-10, 10, 2**12),
     }
     with ThreadPoolExecutor(len(ports)) as executor:
-        ga = GeneticAlgorithm(objective, environment, optimizer_name="holder_table_http", maximize=False,
-                              population_size=population_size, generations=generations, executor=executor,
-                              seed=42)
+        ga = GeneticAlgorithm(
+            objective,
+            environment,
+            optimizer_name="holder_table_http",
+            maximize=False,
+            population_size=population_size,
+            generations=generations,
+            executor=executor,
+            seed=42,
+        )
         result = ga.start()
     print(f"{result.params} = {result.score}")
     return result

@@ -35,11 +35,23 @@ def test_public_names():
     assert geneopt.Result is Result and geneopt.History is History
 
 
-@pytest.mark.parametrize("kwarg", [
-    "start_number_of_population", "number_of_population", "number_of_generations", "comparison_type",
-    "r_cross", "tournament_selection_number", "cache_type", "cache_path", "number_of_workers",
-    "server_start_port", "verbose", "plot_DPI",
-])
+@pytest.mark.parametrize(
+    "kwarg",
+    [
+        "start_number_of_population",
+        "number_of_population",
+        "number_of_generations",
+        "comparison_type",
+        "r_cross",
+        "tournament_selection_number",
+        "cache_type",
+        "cache_path",
+        "number_of_workers",
+        "server_start_port",
+        "verbose",
+        "plot_DPI",
+    ],
+)
 def test_removed_1x_kwargs_raise_type_error(kwarg):
     with pytest.raises(TypeError, match=kwarg):
         GeneticAlgorithm(objective, ENV, **{kwarg: 1})
@@ -52,16 +64,19 @@ def test_environment_is_required_positional():
         GeneticAlgorithm(objective, ENV, "name")  # everything after environment is keyword-only
 
 
-@pytest.mark.parametrize("kwargs, name", [
-    ({"crossover_rate": 1.5}, "crossover_rate"),
-    ({"mutation_rate": -0.1}, "mutation_rate"),
-    ({"population_size": 1}, "population_size"),
-    ({"initial_population_size": 1}, "initial_population_size"),
-    ({"tournament_size": 0}, "tournament_size"),
-    ({"elitism": 5, "population_size": 5}, "elitism"),
-    ({"generations": 0}, "generations"),
-    ({"early_stopping_rounds": 0}, "early_stopping_rounds"),
-])
+@pytest.mark.parametrize(
+    "kwargs, name",
+    [
+        ({"crossover_rate": 1.5}, "crossover_rate"),
+        ({"mutation_rate": -0.1}, "mutation_rate"),
+        ({"population_size": 1}, "population_size"),
+        ({"initial_population_size": 1}, "initial_population_size"),
+        ({"tournament_size": 0}, "tournament_size"),
+        ({"elitism": 5, "population_size": 5}, "elitism"),
+        ({"generations": 0}, "generations"),
+        ({"early_stopping_rounds": 0}, "early_stopping_rounds"),
+    ],
+)
 def test_invalid_numbers_raise_value_error_naming_the_parameter(kwargs, name):
     with pytest.raises(ValueError, match=name):
         GeneticAlgorithm(objective, ENV, **kwargs)

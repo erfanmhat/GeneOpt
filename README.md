@@ -19,6 +19,7 @@ per parameter as keyword arguments and returns a number.
 
 ```python
 """Minimise the Holder table function on a 4096 x 4096 grid."""
+
 import logging
 
 import numpy as np
@@ -27,13 +28,13 @@ from geneopt import GeneticAlgorithm
 
 
 def holder_table(x1, x2):
-    return -abs(np.sin(x1) * np.cos(x2) * np.exp(abs(1 - np.sqrt(x1 ** 2 + x2 ** 2) / np.pi)))
+    return -abs(np.sin(x1) * np.cos(x2) * np.exp(abs(1 - np.sqrt(x1**2 + x2**2) / np.pi)))
 
 
 def main(generations=100, population_size=100):
     environment = {
-        "x1": np.linspace(-10, 10, 2 ** 12),
-        "x2": np.linspace(-10, 10, 2 ** 12),
+        "x1": np.linspace(-10, 10, 2**12),
+        "x2": np.linspace(-10, 10, 2**12),
     }
     ga = GeneticAlgorithm(
         holder_table,
@@ -82,6 +83,7 @@ small steps to neighbouring values; everything else mutates to a uniformly chose
 
 ```python
 """Search a mixed categorical / numeric space, e.g. model hyperparameters."""
+
 import logging
 import math
 
@@ -106,11 +108,19 @@ def main(generations=30, population_size=30):
         "learning_rate": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
         "batch_size": [16, 32, 64, 128, 256],
     }
-    ga = GeneticAlgorithm(validation_score, environment, optimizer_name="hparams",
-                          population_size=population_size, generations=generations, seed=0)
+    ga = GeneticAlgorithm(
+        validation_score,
+        environment,
+        optimizer_name="hparams",
+        population_size=population_size,
+        generations=generations,
+        seed=0,
+    )
     result = ga.start()
-    print(f"best: {result.params} -> {result.score:.3f} "
-          f"({result.n_evaluations} of {3 * 3 * 6 * 5 * 5} configurations evaluated)")
+    print(
+        f"best: {result.params} -> {result.score:.3f} "
+        f"({result.n_evaluations} of {3 * 3 * 6 * 5 * 5} configurations evaluated)"
+    )
     return result
 
 
@@ -172,8 +182,9 @@ def sphere(x, y):
 
 environment = {"x": list(range(-50, 51)), "y": list(range(-50, 51))}
 with ThreadPoolExecutor(max_workers=4) as pool:
-    result = GeneticAlgorithm(sphere, environment, maximize=False, generations=20,
-                              population_size=20, executor=pool).start()
+    result = GeneticAlgorithm(
+        sphere, environment, maximize=False, generations=20, population_size=20, executor=pool
+    ).start()
 print(result.params, result.score)
 ```
 

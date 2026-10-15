@@ -1,5 +1,6 @@
 """Plots over a run's History and its evaluated points. Needs ``GeneOpt[plots]``
 (feature-importance plots additionally need ``GeneOpt[analysis]``)."""
+
 from itertools import combinations
 from pathlib import Path
 
@@ -9,8 +10,8 @@ from .core import diversity
 
 __all__ = ["diversity", "gene_frequency_matrix", "plot_history", "plot_features"]
 
-MAX_BINS = 64           # gene-frequency columns per parameter
-MAX_PAIR_FEATURES = 8   # pairwise scatter plots grow O(p^2); keep the most score-correlated features
+MAX_BINS = 64  # gene-frequency columns per parameter
+MAX_PAIR_FEATURES = 8  # pairwise scatter plots grow O(p^2); keep the most score-correlated features
 
 
 def gene_frequency_matrix(history, param: str) -> np.ndarray:
@@ -23,6 +24,7 @@ def gene_frequency_matrix(history, param: str) -> np.ndarray:
 
 def _figure():
     from matplotlib.figure import Figure  # OO API: no pyplot global state, no GUI backend needed
+
     fig = Figure(figsize=(7, 4.5), layout="constrained")
     return fig, fig.add_subplot()
 
@@ -34,7 +36,9 @@ def _save(fig, path: Path, dpi: int) -> Path:
 
 def _best_so_far(history):
     sign = 1.0 if history.maximize else -1.0
-    best_index, best, out = None, -np.inf, []
+    best_index: tuple[int, int] | None = None
+    best = -np.inf
+    out: list[tuple[int, int]] = []
     for scores in history.scores:
         i = int(np.argmax(sign * scores))
         if best_index is None or sign * scores[i] > best:
@@ -47,7 +51,7 @@ def plot_history(history, out_dir: Path, dpi: int) -> dict:
     gens = np.arange(1, len(history) + 1)
     best_at = _best_so_far(history)
     best_scores = [history.scores[g][i] for g, i in best_at]
-    results = {}
+    results: dict[str, Path | Exception] = {}
 
     def plot(name, draw):
         try:
@@ -61,19 +65,43 @@ def plot_history(history, out_dir: Path, dpi: int) -> dict:
         pick = np.nanmax if history.maximize else np.nanmin
         finite = [np.where(np.isfinite(s), s, np.nan) for s in history.scores]
         ax.plot(gens, best_scores, lw=2, label="best so far")
-        ax.plot(gens, [pick(s) if np.isfinite(s).any() else np.nan for s in finite], lw=1, label="generation best")
-        ax.plot(gens, [np.nanmedian(s) if np.isfinite(s).any() else np.nan for s in finite], lw=1,
-                label="generation median")
+        ax.plot(
+            gens, [pick(s) if np.isfinite(s).any() else np.nan for s in finite], lw=1, label="generation best"
+        )
+        ax.plot(
+            gens,
+            [np.nanmedian(s) if np.isfinite(s).any() else np.nan for s in finite],
+            lw=1,
+            label="generation median",
+        )
         ax.set(title="Score over generations", xlabel="Generation", ylabel="Score")
         ax.legend()
 
     plot("best_score", best_score)
-    plot("diversity", lambda ax: (ax.plot(gens, [diversity(g) for g in history.genomes]),
-                                  ax.set(title="Population diversity", xlabel="Generation",
-                                         ylabel="Mean gene disagreement", ylim=(0, 1))))
-    plot("cache_hit_rate", lambda ax: (ax.plot(gens, [h.mean() for h in history.hits]),
-                                       ax.set(title="Share of population served from cache",
-                                              xlabel="Generation", ylabel="Cache-hit rate", ylim=(0, 1))))
+    plot(
+        "diversity",
+        lambda ax: (
+            ax.plot(gens, [diversity(g) for g in history.genomes]),
+            ax.set(
+                title="Population diversity",
+                xlabel="Generation",
+                ylabel="Mean gene disagreement",
+                ylim=(0, 1),
+            ),
+        ),
+    )
+    plot(
+        "cache_hit_rate",
+        lambda ax: (
+            ax.plot(gens, [h.mean() for h in history.hits]),
+            ax.set(
+                title="Share of population served from cache",
+                xlabel="Generation",
+                ylabel="Cache-hit rate",
+                ylim=(0, 1),
+            ),
+        ),
+    )
 
     for j, param in enumerate(history.environment):
         values = history.environment[param]
@@ -90,13 +118,23 @@ def plot_history(history, out_dir: Path, dpi: int) -> dict:
 
         def gene_freq(ax, param=param, values=values):
             matrix = gene_frequency_matrix(history, param)
-            image = ax.imshow(matrix.T, aspect="auto", origin="lower", cmap="viridis", vmin=0, vmax=1,
-                              extent=(0.5, len(history) + 0.5, -0.5, matrix.shape[1] - 0.5))
+            image = ax.imshow(
+                matrix.T,
+                aspect="auto",
+                origin="lower",
+                cmap="viridis",
+                vmin=0,
+                vmax=1,
+                extent=(0.5, len(history) + 0.5, -0.5, matrix.shape[1] - 0.5),
+            )
             if len(values) <= MAX_BINS:
                 ax.set_yticks(range(len(values)), [str(v) for v in values])
             ax.figure.colorbar(image, ax=ax, label="share of population")
-            ax.set(title=f"Gene frequencies: {param}", xlabel="Generation",
-                   ylabel=param if len(values) <= MAX_BINS else f"{param} (binned)")
+            ax.set(
+                title=f"Gene frequencies: {param}",
+                xlabel="Generation",
+                ylabel=param if len(values) <= MAX_BINS else f"{param} (binned)",
+            )
 
         plot(f"param_{param}", best_param)
         plot(f"gene_freq_{param}", gene_freq)
@@ -106,10 +144,9 @@ def plot_history(history, out_dir: Path, dpi: int) -> dict:
 def plot_features(evaluations, out_dir: Path, dpi: int) -> dict:
     """Landscape analysis over the unique evaluated points (numeric parameters, finite scores)."""
     data = evaluations[np.isfinite(evaluations["score"])]
-    features = [c for c in data.columns[:-1]
-                if data[c].dtype.kind in "iuf" and data[c].nunique() > 1]
+    features = [c for c in data.columns[:-1] if data[c].dtype.kind in "iuf" and data[c].nunique() > 1]
     data = data[features + ["score"]].astype(float)
-    results = {}
+    results: dict[str, Path | Exception] = {}
 
     def plot(name, draw):
         try:
@@ -120,8 +157,13 @@ def plot_features(evaluations, out_dir: Path, dpi: int) -> dict:
             results[name] = e
 
     corr = data.corr(method="spearman")
-    plot("corr_with_score", lambda ax: (corr["score"].drop("score").sort_values().plot.barh(ax=ax),
-                                        ax.set(title="Spearman correlation with score")))
+    plot(
+        "corr_with_score",
+        lambda ax: (
+            corr["score"].drop("score").sort_values().plot.barh(ax=ax),
+            ax.set(title="Spearman correlation with score"),
+        ),
+    )
 
     def corr_matrix(ax):
         image = ax.imshow(corr.values, cmap="RdBu", vmin=-1, vmax=1)
@@ -149,7 +191,9 @@ def plot_features(evaluations, out_dir: Path, dpi: int) -> dict:
             ax.scatter(y, pred, s=8)
             lo, hi = min(y.min(), pred.min()), max(y.max(), pred.max())
             ax.plot([lo, hi], [lo, hi], "r--", label="y = x")
-            ax.set(title=f"Predicted vs actual (in-sample R² = {r2:.3f})", xlabel="Actual", ylabel="Predicted")
+            ax.set(
+                title=f"Predicted vs actual (in-sample R² = {r2:.3f})", xlabel="Actual", ylabel="Predicted"
+            )
             ax.legend()
 
         def importance(ax):
@@ -162,7 +206,9 @@ def plot_features(evaluations, out_dir: Path, dpi: int) -> dict:
         plot("feature_importance", importance)
 
     for f in features:
-        plot(f"hist_{f}", lambda ax, f=f: (ax.hist(data[f], bins=20), ax.set(title=f"Evaluated {f}", xlabel=f)))
+        plot(
+            f"hist_{f}", lambda ax, f=f: (ax.hist(data[f], bins=20), ax.set(title=f"Evaluated {f}", xlabel=f))
+        )
 
         def regression(ax, f=f):
             ax.scatter(data[f], data["score"], s=8)
@@ -175,6 +221,7 @@ def plot_features(evaluations, out_dir: Path, dpi: int) -> dict:
 
     top = corr["score"].drop("score").abs().sort_values(ascending=False).index[:MAX_PAIR_FEATURES]
     for a, b in combinations(sorted(top), 2):
+
         def scatter(ax, a=a, b=b):
             points = ax.scatter(data[a], data[b], c=data["score"], s=10, cmap="viridis")
             ax.figure.colorbar(points, ax=ax, label="score")

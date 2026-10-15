@@ -1,4 +1,5 @@
 """Minimise the Holder table function on a 4096 x 4096 grid."""
+
 import logging
 
 import numpy as np
@@ -7,13 +8,13 @@ from geneopt import GeneticAlgorithm
 
 
 def holder_table(x1, x2):
-    return -abs(np.sin(x1) * np.cos(x2) * np.exp(abs(1 - np.sqrt(x1 ** 2 + x2 ** 2) / np.pi)))
+    return -abs(np.sin(x1) * np.cos(x2) * np.exp(abs(1 - np.sqrt(x1**2 + x2**2) / np.pi)))
 
 
 def main(generations=100, population_size=100):
     environment = {
-        "x1": np.linspace(-10, 10, 2 ** 12),
-        "x2": np.linspace(-10, 10, 2 ** 12),
+        "x1": np.linspace(-10, 10, 2**12),
+        "x2": np.linspace(-10, 10, 2**12),
     }
     ga = GeneticAlgorithm(
         holder_table,

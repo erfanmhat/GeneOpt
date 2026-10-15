@@ -24,7 +24,10 @@ def same_run(a, b):
     (ga_a, r_a), (ga_b, r_b) = a, b
     assert dataclasses.replace(r_a, elapsed=0) == dataclasses.replace(r_b, elapsed=0)
     for name in ("genomes", "scores", "hits"):
-        assert all(np.array_equal(x, y) for x, y in zip(getattr(ga_a.history, name), getattr(ga_b.history, name)))
+        assert all(
+            np.array_equal(x, y)
+            for x, y in zip(getattr(ga_a.history, name), getattr(ga_b.history, name), strict=True)
+        )
 
 
 def test_thread_pool_gives_identical_run():
@@ -70,6 +73,7 @@ def make_fail_after(n):
         if len(calls) > n:
             raise RuntimeError("boom")
         return float(x)
+
     return objective
 
 
@@ -83,6 +87,7 @@ def test_on_error_raise_keeps_finished_work_on_disk(tmp_path):
 
 def test_on_error_raise_with_executor_saves_the_rest_of_the_batch(tmp_path):
     import threading
+
     lock, calls = threading.Lock(), []
 
     def objective(x, y):
@@ -94,8 +99,9 @@ def test_on_error_raise_with_executor_saves_the_rest_of_the_batch(tmp_path):
         return float(x)
 
     with ThreadPoolExecutor(4) as pool:
-        ga = GeneticAlgorithm(objective, ENV, population_size=16, generations=3, cache_dir=tmp_path,
-                              executor=pool)
+        ga = GeneticAlgorithm(
+            objective, ENV, population_size=16, generations=3, cache_dir=tmp_path, executor=pool
+        )
         with pytest.raises(RuntimeError, match="boom"):
             ga.start()
     lines = next(tmp_path.glob("*.jsonl")).read_text().splitlines()
@@ -125,15 +131,20 @@ def test_on_error_retry_gives_up_after_max_retries(monkeypatch):
         raise ConnectionError("down")
 
     with pytest.raises(ConnectionError):
-        GeneticAlgorithm(objective, ENV, population_size=4, generations=1, on_error="retry", max_retries=2).start()
+        GeneticAlgorithm(
+            objective, ENV, population_size=4, generations=1, on_error="retry", max_retries=2
+        ).start()
     assert sleeps[:2] == [0.5, 1.0]
 
 
-@pytest.mark.parametrize("kwargs, name", [
-    ({"on_error": "ignore"}, "on_error"),
-    ({"max_retries": -1}, "max_retries"),
-    ({"executor": object()}, "executor"),
-])
+@pytest.mark.parametrize(
+    "kwargs, name",
+    [
+        ({"on_error": "ignore"}, "on_error"),
+        ({"max_retries": -1}, "max_retries"),
+        ({"executor": object()}, "executor"),
+    ],
+)
 def test_invalid_engine_options(kwargs, name):
     with pytest.raises((ValueError, TypeError), match=name):
         GeneticAlgorithm(peak, ENV, **kwargs)

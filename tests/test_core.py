@@ -12,20 +12,27 @@ def counting(counter, fn):
     def objective(**params):
         counter[tuple(params.items())] += 1
         return fn(**params)
+
     return objective
 
 
 def test_GC_7_identical_genomes_are_evaluated_once():
     calls = Counter()
-    ga = GeneticAlgorithm(counting(calls, lambda x, y: x + y), {"x": [1.0], "y": [2.0]},
-                          population_size=20, generations=3)
+    ga = GeneticAlgorithm(
+        counting(calls, lambda x, y: x + y), {"x": [1.0], "y": [2.0]}, population_size=20, generations=3
+    )
     ga.start()
     assert sum(calls.values()) == 1
 
 
 def test_H_1_history_has_every_individual_of_every_generation():
-    ga = GeneticAlgorithm(lambda x, y: -(x * x + y * y), {"x": np.linspace(-1, 1, 16), "y": np.linspace(-1, 1, 16)},
-                          population_size=20, generations=15, seed=1)
+    ga = GeneticAlgorithm(
+        lambda x, y: -(x * x + y * y),
+        {"x": np.linspace(-1, 1, 16), "y": np.linspace(-1, 1, 16)},
+        population_size=20,
+        generations=15,
+        seed=1,
+    )
     ga.start()
     assert [len(s) for s in ga.history.scores] == [20] * 15
     assert ga.history.genomes[3].shape == (20, 2)
@@ -45,16 +52,23 @@ def test_odd_population_size_is_kept():
 
 
 def test_initial_population_size_applies_to_generation_zero_only():
-    ga = GeneticAlgorithm(lambda x: x, {"x": list(range(50))}, population_size=10,
-                          initial_population_size=30, generations=3)
+    ga = GeneticAlgorithm(
+        lambda x: x, {"x": list(range(50))}, population_size=10, initial_population_size=30, generations=3
+    )
     ga.start()
     assert [len(s) for s in ga.history.scores] == [30, 10, 10]
 
 
 @pytest.mark.parametrize("seed", range(5))
 def test_elitism_keeps_best_of_population_monotonic(seed):
-    ga = GeneticAlgorithm(lambda x, y: -abs(x - 37) - abs(y - 3), {"x": list(range(100)), "y": list(range(10))},
-                          population_size=12, generations=25, elitism=1, seed=seed)
+    ga = GeneticAlgorithm(
+        lambda x, y: -abs(x - 37) - abs(y - 3),
+        {"x": list(range(100)), "y": list(range(10))},
+        population_size=12,
+        generations=25,
+        elitism=1,
+        seed=seed,
+    )
     ga.start()
     best = [s.max() for s in ga.history.scores]
     assert best == sorted(best)
@@ -63,30 +77,39 @@ def test_elitism_keeps_best_of_population_monotonic(seed):
 @pytest.mark.parametrize("seed", range(5))
 def test_finds_bowl_optimum(seed):
     env = {"x": np.linspace(-5, 5, 101), "y": np.linspace(-5, 5, 101)}
-    r = GeneticAlgorithm(lambda x, y: x * x + y * y, env, maximize=False,
-                         population_size=40, generations=60, seed=seed).start()
+    r = GeneticAlgorithm(
+        lambda x, y: x * x + y * y, env, maximize=False, population_size=40, generations=60, seed=seed
+    ).start()
     assert r.score < 1e-9 and r.params == {"x": 0.0, "y": 0.0}
 
 
 @pytest.mark.parametrize("seed", range(5))
 def test_finds_categorical_optimum_within_budget(seed):
     env = {f"p{i}": list("abcde") for i in range(6)}
-    r = GeneticAlgorithm(lambda **p: sum(v == "c" for v in p.values()), env,
-                         population_size=30, generations=60, target_score=6, seed=seed).start()
+    r = GeneticAlgorithm(
+        lambda **p: sum(v == "c" for v in p.values()),
+        env,
+        population_size=30,
+        generations=60,
+        target_score=6,
+        seed=seed,
+    ).start()
     assert r.stopped_by == "target_score" and r.n_evaluations <= 500
 
 
 def test_E_6_early_stopping_is_exact():
     r = None
-    ga = GeneticAlgorithm(lambda x: 1.0, {"x": list(range(10))}, population_size=4, generations=50,
-                          early_stopping_rounds=3)
+    ga = GeneticAlgorithm(
+        lambda x: 1.0, {"x": list(range(10))}, population_size=4, generations=50, early_stopping_rounds=3
+    )
     r = ga.start()
     assert r.stopped_by == "early_stopping" and len(ga.history) == 4  # gen 0 + 3 without improvement
 
 
 def test_target_score_stops_after_scoring_the_whole_generation():
-    ga = GeneticAlgorithm(lambda x: x, {"x": list(range(10))}, population_size=20, generations=50,
-                          target_score=5)
+    ga = GeneticAlgorithm(
+        lambda x: x, {"x": list(range(10))}, population_size=20, generations=50, target_score=5
+    )
     r = ga.start()
     assert r.stopped_by == "target_score" and r.score >= 5
     assert len(ga.history.scores[-1]) == 20
@@ -106,8 +129,12 @@ def test_result_counters():
 
 def test_same_seed_same_result_and_start_is_repeatable():
     env = {"x": list(range(64)), "y": list(range(64))}
-    make = lambda: GeneticAlgorithm(lambda x, y: -(x - 20) ** 2 - (y - 40) ** 2, env, population_size=10,
-                                    generations=10, seed=7)
+
+    def make():
+        return GeneticAlgorithm(
+            lambda x, y: -((x - 20) ** 2) - (y - 40) ** 2, env, population_size=10, generations=10, seed=7
+        )
+
     ga = make()
     a, b = ga.start(), ga.start()
     c = make().start()
@@ -139,14 +166,23 @@ def test_1x_cache_files_are_never_opened(tmp_path, monkeypatch):
     opened = []
     real_open = builtins.open
     monkeypatch.setattr(builtins, "open", lambda f, *a, **k: opened.append(str(f)) or real_open(f, *a, **k))
-    GeneticAlgorithm(lambda x: x, {"x": [1.0, 2.0]}, optimizer_name="op", cache_dir=tmp_path,
-                     generations=2, population_size=4).start()
+    GeneticAlgorithm(
+        lambda x: x,
+        {"x": [1.0, 2.0]},
+        optimizer_name="op",
+        cache_dir=tmp_path,
+        generations=2,
+        population_size=4,
+    ).start()
     assert not [f for f in opened if f.endswith((".csv", ".json"))]
 
 
 def test_categorical_disk_cache_reloads_with_hits(tmp_path):
     env = {"act": ["relu", "tanh", "gelu"], "lr": [1e-3, 1e-2]}
-    score = lambda act, lr: {"relu": 1, "tanh": 2, "gelu": 3}[act] + lr
+
+    def score(act, lr):
+        return {"relu": 1, "tanh": 2, "gelu": 3}[act] + lr
+
     GeneticAlgorithm(score, env, cache_dir=tmp_path, generations=5, population_size=6).start()
     r = GeneticAlgorithm(score, env, cache_dir=tmp_path, generations=5, population_size=6).start()
     assert r.n_evaluations == 0 and r.params == {"act": "gelu", "lr": 1e-2}
@@ -154,11 +190,14 @@ def test_categorical_disk_cache_reloads_with_hits(tmp_path):
 
 def test_objective_receives_a_fresh_dict_each_call():
     seen = []
-    GeneticAlgorithm(lambda **p: seen.append(p) or 0.0, {"x": [1, 2]}, generations=2, population_size=4).start()
+    GeneticAlgorithm(
+        lambda **p: seen.append(p) or 0.0, {"x": [1, 2]}, generations=2, population_size=4
+    ).start()
     assert all(set(p) == {"x"} for p in seen)  # GC-4: no score/generation keys injected
 
 
 # --- operators ---------------------------------------------------------------
+
 
 def test_mutation_rate_is_per_gene_probability():
     rng = np.random.default_rng(0)

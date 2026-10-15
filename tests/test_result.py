@@ -8,8 +8,15 @@ from geneopt.core import Result
 
 
 def make_result():
-    return Result(params={"n": np.int64(3), "x": np.float64(0.5), "act": "relu"}, score=np.float64(-1.5),
-                  generation=4, n_evaluations=10, n_cache_hits=2, elapsed=0.1, stopped_by="generations")
+    return Result(
+        params={"n": np.int64(3), "x": np.float64(0.5), "act": "relu"},
+        score=np.float64(-1.5),
+        generation=4,
+        n_evaluations=10,
+        n_cache_hits=2,
+        elapsed=0.1,
+        stopped_by="generations",
+    )
 
 
 def test_values_are_python_native_and_json_serialisable():

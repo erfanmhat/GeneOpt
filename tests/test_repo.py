@@ -12,12 +12,15 @@ PYTHON_BLOCKS = re.findall(r"```python\n(.*?)```", README, re.S)
 
 
 def test_1x_package_is_gone():
-    result = subprocess.run([sys.executable, "-c", "import GeneOpt"], cwd=ROOT, capture_output=True, text=True)
+    result = subprocess.run(
+        [sys.executable, "-c", "import GeneOpt"], cwd=ROOT, capture_output=True, text=True
+    )
     assert "ModuleNotFoundError: No module named 'GeneOpt'" in result.stderr
 
 
-@pytest.mark.parametrize("path", ["GeneOpt", "main.py", "main2.py", "server.py", "RunNServers.py", "setup.py",
-                                  "image"])
+@pytest.mark.parametrize(
+    "path", ["GeneOpt", "main.py", "main2.py", "server.py", "RunNServers.py", "setup.py", "image"]
+)
 def test_1x_files_are_deleted(path):
     assert not (ROOT / path).exists()
 
@@ -39,9 +42,20 @@ def test_readme_code_is_an_example_file_or_runs(block, tmp_path, monkeypatch):
     exec(compile(block, "README.md", "exec"), {"__name__": "readme"})
 
 
-@pytest.mark.parametrize("stale", ["Logger", "GeneticAlgorithmComparisonType", "GeneticAlgorithmCacheType",
-                                   "CachePath", "RunNServer", "number_of_population", "r_cross", "debug=True",
-                                   "blob/master/image"])
+@pytest.mark.parametrize(
+    "stale",
+    [
+        "Logger",
+        "GeneticAlgorithmComparisonType",
+        "GeneticAlgorithmCacheType",
+        "CachePath",
+        "RunNServer",
+        "number_of_population",
+        "r_cross",
+        "debug=True",
+        "blob/master/image",
+    ],
+)
 def test_readme_has_no_1x_leftovers(stale):
     assert not re.search(rf"\b{re.escape(stale)}\b", README)  # word match: getLogger is fine
 

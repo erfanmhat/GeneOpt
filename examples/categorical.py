@@ -1,4 +1,5 @@
 """Search a mixed categorical / numeric space, e.g. model hyperparameters."""
+
 import logging
 import math
 
@@ -23,11 +24,19 @@ def main(generations=30, population_size=30):
         "learning_rate": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
         "batch_size": [16, 32, 64, 128, 256],
     }
-    ga = GeneticAlgorithm(validation_score, environment, optimizer_name="hparams",
-                          population_size=population_size, generations=generations, seed=0)
+    ga = GeneticAlgorithm(
+        validation_score,
+        environment,
+        optimizer_name="hparams",
+        population_size=population_size,
+        generations=generations,
+        seed=0,
+    )
     result = ga.start()
-    print(f"best: {result.params} -> {result.score:.3f} "
-          f"({result.n_evaluations} of {3 * 3 * 6 * 5 * 5} configurations evaluated)")
+    print(
+        f"best: {result.params} -> {result.score:.3f} "
+        f"({result.n_evaluations} of {3 * 3 * 6 * 5 * 5} configurations evaluated)"
+    )
     return result
 
 
