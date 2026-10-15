@@ -22,7 +22,9 @@ def test_1x_package_is_gone():
     "path", ["GeneOpt", "main.py", "main2.py", "server.py", "RunNServers.py", "setup.py", "image"]
 )
 def test_1x_files_are_deleted(path):
-    assert not (ROOT / path).exists()
+    # compare exact names: on case-insensitive filesystems (Windows, macOS) the new geneopt/
+    # folder makes (ROOT / "GeneOpt").exists() true
+    assert path not in {entry.name for entry in ROOT.iterdir()}
 
 
 def test_no_shims_in_package():
