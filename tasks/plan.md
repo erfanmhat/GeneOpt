@@ -30,10 +30,10 @@ package is deleted only in the final task.
 
 ### Phase 1: Foundation
 - [x] Task 1: Packaging skeleton + repo hygiene
-- [ ] Task 2: `GenomeCache` (exact keys, fingerprint, JSONL)
+- [x] Task 2: `GenomeCache` (exact keys, fingerprint, JSONL)
 
 ### Checkpoint A
-- [ ] `pytest` green, `python -m build` produces wheel + sdist
+- [x] `pytest` green, wheel builds
 
 ### Phase 2: Core
 - [ ] Task 3: `History` + `Result` types

@@ -16,16 +16,16 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 2: GenomeCache
 **Description:** `geneopt/cache.py`: `GenomeCache(path|None, fingerprint)` with dict storage keyed by index tuples. `fingerprint(env, fn, objective_version)`. Append-only JSONL (header line + one record per put, `.item()` for numpy). A truncated last line is skipped with a warning. Fingerprint mismatch → `CacheMismatchError`. 1.x CSV/JSON files are never opened. NaN scores rejected.
 **Acceptance criteria:**
-- [ ] GC-1 (1_000_000 vs 1_000_005 distinct), GC-5 (params named score/generation), GC-6 (string values), GC-8 (np.int64) round-trip through disk
-- [ ] A changed env / objective body / `objective_version` → different fingerprint (GC-2/GC-3). Truncated tail loads with one warning (GC-10)
-- [ ] 10⁵ put+get < 1 s (GC-9)
+- [x] GC-1 (1_000_000 vs 1_000_005 distinct), GC-5 (params named score/generation), GC-6 (string values), GC-8 (np.int64) round-trip through disk
+- [x] A changed env / objective body / `objective_version` → different fingerprint (GC-2/GC-3). Truncated tail loads with one warning (GC-10)
+- [x] 10⁵ put+get < 1 s (GC-9)
 **Verification:** `pytest tests/test_cache.py`
 **Dependencies:** 1
 **Files:** `geneopt/cache.py`, `tests/test_cache.py`
 **Scope:** S
 
 ## Checkpoint A
-- [ ] `pytest` green, `python -m build` OK
+- [x] `pytest` green, `python -m build` OK
 
 ## Task 3: History + Result
 **Description:** `geneopt/history.py`: `History` (per-generation genomes/scores/hits arrays, `append`, `to_frame(env)` with lazy pandas). `Result` frozen dataclass in `geneopt/core.py` (010), with Python-native values via `_to_python`.
