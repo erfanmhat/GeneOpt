@@ -193,5 +193,8 @@ Subprocess tests must pass the parent environment through: Windows Python can't 
 - [x] Both workflows pass actionlint. Every job's commands pass locally on Linux: lint; test on
       Python 3.10, 3.12 and 3.13; test-plots + coverage gate; build + twine check; bench.
       `publish` can only run on GitHub.
-- [ ] CI is green on the full GitHub matrix and takes < 5 min. *(Needs a push: Windows/macOS and
-      publish are unverified until the first run on GitHub.)*
+- [x] CI is green on the full GitHub matrix and takes < 5 min: run 38811579288 on PR #1 took
+      1 min 40 s, with all 16 jobs passing and `publish` correctly skipped (no tag). The first run
+      failed on all 8 Windows/macOS jobs: a test checked `(ROOT / "GeneOpt").exists()`, which is
+      true on case-insensitive filesystems because `geneopt/` exists. Fixed by comparing exact
+      directory names.

@@ -93,7 +93,7 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 | Item | Where | Notes |
 |---|---|---|
 | Crossover mixes about one gene per mating | [012](012-crossover-mixing.md) | The one search-quality issue the benchmark found |
-| CI run on GitHub (Windows, macOS) and PyPI publishing | [013](013-release-2.0.0.md) | Needs a push, a one-time PyPI setting by the owner, then a tag |
+| PyPI publishing | [013](013-release-2.0.0.md) | CI is green on all 3 OSes (PR #1). Waiting on a one-time PyPI setting by the owner, then merge and tag |
 | `History.save()` and `int32` genome storage | [002 §1](002-history-and-plots.md) | Marked *not built yet*. Nobody needs them so far |
 | Per-generation `callback` hook | [005 §5](005-public-api-and-logging.md) | Optional by design. Build it when someone asks |
 | Objectives without an inspectable signature | `core.py` validation | A 2-line fallback that skips the signature check. Untested, low risk |

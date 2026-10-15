@@ -16,10 +16,11 @@ PyPI login.
 ## Checklist
 
 ### On GitHub (done by Claude)
-- [ ] Push the `v2.0.0` branch and open a pull request into `master`. The PR runs `ci.yml` on
+- [x] Push the `v2.0.0` branch and open a pull request into `master`
+      ([PR #1](https://github.com/erfanmhat/GeneOpt/pull/1), draft). The PR runs `ci.yml` on
       the full matrix (3 OSes × Python 3.10–3.13).
-- [ ] CI green on the full matrix in < 5 min (007's last open criterion). Fix anything
-      Windows/macOS-specific.
+- [x] CI green on the full matrix in < 5 min: 1 min 40 s. The one Windows/macOS failure (a
+      case-insensitive path check in a test) was fixed.
 
 ### On PyPI (owner only, one time, needs a login)
 - [ ] pypi.org → *Your projects* → **GeneOpt** → *Manage* → **Publishing** → *Add a new
