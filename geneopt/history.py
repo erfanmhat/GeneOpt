@@ -7,6 +7,7 @@ import numpy as np
 @dataclass
 class History:
     environment: dict
+    maximize: bool = True
     genomes: list = field(default_factory=list)  # per generation: (pop, n_params) int index array
     scores: list = field(default_factory=list)   # per generation: (pop,) float
     hits: list = field(default_factory=list)     # per generation: (pop,) bool, served from cache
