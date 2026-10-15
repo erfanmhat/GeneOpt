@@ -46,10 +46,10 @@ package is deleted only in the final task.
 ### Phase 3: Surface
 - [x] Task 6: Plots + `evaluations()` / `to_frame()`
 - [x] Task 7: Examples (quickstart, categorical, distributed_http)
-- [ ] Task 8: Delete 1.x package and files, rewrite README, CHANGELOG
+- [x] Task 8: Delete 1.x package and files, rewrite README, CHANGELOG
 
 ### Checkpoint C (complete)
-- [ ] All 011 acceptance criteria pass. `pytest` green. `python -m build` + `twine check` clean
+- [x] All 011 acceptance criteria pass. `pytest` green. `python -m build` + `twine check` clean
 
 ## Risks and mitigations
 

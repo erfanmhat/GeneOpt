@@ -87,13 +87,13 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 8: Delete 1.x, README, CHANGELOG
 **Description:** Delete `GeneOpt/`, `main.py`, `main2.py`, `server.py`, `RunNServers.py`. Rewrite the README for the 2.0 API (no before/after). Add a `CHANGELOG.md` 2.0.0 entry that links to spec 011.
 **Acceptance criteria:**
-- [ ] `import GeneOpt` → `ModuleNotFoundError`. `grep -rnE "DeprecationWarning|_compat|_LEGACY" geneopt/` is empty
-- [ ] Every code block in the README is either an embedded example file or runs as written
-- [ ] `python -m build && twine check dist/*` pass
+- [x] `import GeneOpt` → `ModuleNotFoundError`. `grep -rnE "DeprecationWarning|_compat|_LEGACY" geneopt/` is empty
+- [x] Every code block in the README is either an embedded example file or runs as written
+- [x] `python -m build && twine check dist/*` pass (run in a scratch venv: sdist + wheel PASSED)
 **Verification:** full `pytest` · build · twine check
 **Dependencies:** 6, 7
 **Files:** deletions, `README.md`, `CHANGELOG.md`
 **Scope:** M
 
 ## Checkpoint C
-- [ ] All spec 011 acceptance criteria met. `pytest` green. Build clean
+- [x] All spec 011 acceptance criteria met. `pytest` green. Build clean
