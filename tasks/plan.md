@@ -33,7 +33,7 @@ Make the 2.0 test suite meet spec 007:
 ## Task list
 
 ### Phase 1: Suite structure
-- [ ] Task 1: `plots` marker; core suite passes with numpy + pytest only
+- [x] Task 1: `plots` marker; core suite passes with numpy + pytest only
 - [ ] Task 2: ruff + mypy config, `py.typed`, findings fixed
 
 ### Checkpoint A

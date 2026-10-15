@@ -7,9 +7,9 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 1: Core vs plots test split
 **Description:** Register a `plots` marker in pyproject. Mark every test that needs pandas, matplotlib or catboost (History.to_frame, evaluations, plots, the quickstart example). Add `hypothesis`, `ruff`, `mypy` and `pytest-cov` to the `dev` extra.
 **Acceptance criteria:**
-- [ ] In a fresh venv with only `.[dev]`, `pytest -m "not plots"` passes, with no import errors and no skips caused by missing modules
-- [ ] With `.[dev,analysis]`, `pytest -m plots` passes, and the full `pytest` count equals the sum of the two
-- [ ] An unregistered marker is an error (`--strict-markers`)
+- [x] In a fresh venv with only `.[dev]`, `pytest -m "not plots"` passes, with no import errors and no skips caused by missing modules
+- [x] With `.[dev,analysis]`, `pytest -m plots` passes, and the full `pytest` count equals the sum of the two
+- [x] An unregistered marker is an error (`--strict-markers`)
 **Verification:** both venv runs
 **Dependencies:** None
 **Files:** `pyproject.toml`, `tests/test_history.py`, `tests/test_plots.py`, `tests/test_examples.py`

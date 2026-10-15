@@ -144,6 +144,7 @@ def test_X_2_no_example_enables_debug_mode():
 
 # --- runnable examples --------------------------------------------------------
 
+@pytest.mark.plots  # the quickstart writes plots
 def test_quickstart_runs(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = quickstart.main(generations=3, population_size=10)

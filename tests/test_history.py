@@ -1,8 +1,10 @@
 import numpy as np
+import pytest
 
 from geneopt.history import History
 
 
+@pytest.mark.plots  # to_frame needs pandas
 def test_to_frame_has_one_row_per_individual_per_generation():
     history = History({"act": ["relu", "tanh"], "lr": [0.1, 0.01, 0.001]})
     history.append(np.array([[0, 2], [1, 0]]), np.array([1.0, 2.0]), np.array([False, True]))

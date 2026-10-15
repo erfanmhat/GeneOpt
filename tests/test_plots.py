@@ -6,6 +6,8 @@ import pytest
 from geneopt import GeneticAlgorithm
 from geneopt.plots import diversity, gene_frequency_matrix
 
+pytestmark = pytest.mark.plots  # needs pandas + matplotlib (catboost optional)
+
 ENV = {"x": np.linspace(-2, 2, 21), "y": np.linspace(-2, 2, 21), "act": ["relu", "tanh", "gelu"]}
 
 
