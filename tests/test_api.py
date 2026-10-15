@@ -94,6 +94,8 @@ def test_environment_is_required_positional():
         ({"elitism": 5, "population_size": 5}, "elitism"),
         ({"generations": 0}, "generations"),
         ({"early_stopping_rounds": 0}, "early_stopping_rounds"),
+        ({"crossover_swap_rate": 1.5}, "crossover_swap_rate"),
+        ({"crossover_swap_rate": -0.1}, "crossover_swap_rate"),
     ],
 )
 def test_invalid_numbers_raise_value_error_naming_the_parameter(kwargs, name):

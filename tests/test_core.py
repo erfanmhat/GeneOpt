@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from geneopt import GeneticAlgorithm
-from geneopt.core import _mutate, _tournament, diversity
+from geneopt.core import _crossover, _mutate, _tournament, diversity
 
 
 def counting(counter, fn):
@@ -294,3 +294,40 @@ def test_E_3_adaptive_rate_rises_as_diversity_falls():
     assert rates[0] == pytest.approx(0.5) and rates[-1] == pytest.approx(0.05)
     assert _mutation_rate(0.8, 0.0, adaptive=True) == pytest.approx(0.8)  # ceiling never below base
     assert _mutation_rate(0.05, 0.0, adaptive=False) == 0.05
+
+
+# --- crossover (spec 012) ----------------------------------------------------
+
+
+def test_crossover_swaps_genes_at_the_configured_rate():
+    rng = np.random.default_rng(0)
+    p1, p2 = np.zeros((5_000, 10), dtype=int), np.ones((5_000, 10), dtype=int)
+    for rate in (0.1, 0.5):
+        c1, c2 = _crossover(p1, p2, swap_rate=rate, crossover_rate=1.0, rng=rng)
+        assert abs(c1.mean() - rate) < 0.1 * rate  # c1 holds a 1 exactly where a gene was swapped
+
+
+def test_crossover_rate_zero_never_swaps():
+    rng = np.random.default_rng(0)
+    p1, p2 = np.zeros((100, 4), dtype=int), np.ones((100, 4), dtype=int)
+    c1, c2 = _crossover(p1, p2, swap_rate=1.0, crossover_rate=0.0, rng=rng)
+    assert (c1 == 0).all() and (c2 == 1).all()
+
+
+def test_crossover_children_hold_exactly_the_parents_genes():
+    rng = np.random.default_rng(1)
+    p1, p2 = rng.integers(0, 50, (200, 7)), rng.integers(0, 50, (200, 7))
+    c1, c2 = _crossover(p1, p2, swap_rate=0.5, crossover_rate=0.9, rng=rng)
+    assert ((c1 == p1) | (c1 == p2)).all() and ((c1 + c2) == (p1 + p2)).all()
+
+
+def test_default_swap_rate_is_one_over_n_params():
+    env = {f"p{i}": list(range(30)) for i in range(5)}
+
+    def run(**kw):
+        ga = GeneticAlgorithm(total, env, population_size=12, generations=8, seed=3, **kw)
+        result = ga.start()
+        return result.params, result.score, [g.tobytes() for g in ga.history.genomes]
+
+    assert run() == run(crossover_swap_rate=1 / 5)
+    assert run() != run(crossover_swap_rate=0.5)

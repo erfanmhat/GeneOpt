@@ -68,6 +68,14 @@ def _tournament(signed_scores, k: int, m: int, rng) -> np.ndarray:
     return candidates[np.arange(m), np.argmax(signed_scores[candidates], axis=1)]
 
 
+def _crossover(p1, p2, swap_rate: float, crossover_rate: float, rng) -> tuple[np.ndarray, np.ndarray]:
+    """Per-gene swap between paired parents: each pair crosses with ``crossover_rate``, and then
+    each gene is exchanged with ``swap_rate``."""
+    swap = rng.random(p1.shape) < swap_rate
+    swap &= (rng.random(len(p1)) < crossover_rate)[:, None]
+    return np.where(swap, p2, p1), np.where(swap, p1, p2)
+
+
 def _mutate(genomes, rate: float, sizes, ordered, rng) -> np.ndarray:
     """Each gene mutates with probability ``rate``: a local creep for ordered numeric
     parameters, a uniform pick among the other values otherwise."""
@@ -139,6 +147,7 @@ class GeneticAlgorithm:
         initial_population_size: int | None = None,
         generations: int = 100,
         crossover_rate: float = 0.9,
+        crossover_swap_rate: float | None = None,
         mutation_rate: float = 0.05,
         adaptive_mutation: bool = True,
         tournament_size: int = 3,
@@ -156,6 +165,12 @@ class GeneticAlgorithm:
             raise TypeError(f"objective_func must be callable, got {objective_func!r}")
         env = _check_environment(environment)
         _check("crossover_rate", crossover_rate, 0 <= crossover_rate <= 1, "in [0, 1]")
+        _check(
+            "crossover_swap_rate",
+            crossover_swap_rate,
+            crossover_swap_rate is None or 0 <= crossover_swap_rate <= 1,
+            "None or in [0, 1]",
+        )
         _check("mutation_rate", mutation_rate, 0 <= mutation_rate <= 1, "in [0, 1]")
         _check("population_size", population_size, population_size >= 2, ">= 2")
         _check(
@@ -199,6 +214,8 @@ class GeneticAlgorithm:
         self._initial_population_size = initial_population_size or population_size
         self._generations = generations
         self._crossover_rate = crossover_rate
+        # per-gene swap probability; None keeps the 1/n_params rule
+        self._swap_rate = 1.0 / len(env) if crossover_swap_rate is None else crossover_swap_rate
         self._mutation_rate = mutation_rate
         self._adaptive_mutation = adaptive_mutation
         self._tournament_size = tournament_size
@@ -271,10 +288,8 @@ class GeneticAlgorithm:
         n_children = self._population_size - len(elites)
         n_pairs = (n_children + 1) // 2
         parents = population[_tournament(signed, self._tournament_size, 2 * n_pairs, rng)]
-        p1, p2 = parents[:n_pairs], parents[n_pairs:]
-        swap = rng.random(p1.shape) < 1.0 / p1.shape[1]
-        swap &= (rng.random(n_pairs) < self._crossover_rate)[:, None]
-        children = np.vstack([np.where(swap, p2, p1), np.where(swap, p1, p2)])[:n_children]
+        c1, c2 = _crossover(parents[:n_pairs], parents[n_pairs:], self._swap_rate, self._crossover_rate, rng)
+        children = np.vstack([c1, c2])[:n_children]
         children = _mutate(children, rate, self._sizes, self._ordered, rng)
         return np.vstack([np.array(elites).reshape(-1, len(self._names)), children])
 

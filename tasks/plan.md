@@ -18,7 +18,7 @@ to **measure first, then change the default**.
 
 ## Task list
 
-- [ ] Task 1: `crossover_swap_rate` parameter + `_crossover` extraction (no behaviour change)
+- [x] Task 1: `crossover_swap_rate` parameter + `_crossover` extraction (no behaviour change)
 - [ ] Task 2: Benchmark 1/n vs 0.2 vs 0.5 on all three problems (30 seeds), results in spec 012
 - [ ] Task 3: Set the default to the winning rate (or revise spec 012 if the cause is elsewhere); update README, CHANGELOG, benchmark table
 

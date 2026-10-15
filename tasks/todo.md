@@ -5,9 +5,9 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 1: `crossover_swap_rate` parameter, `_crossover` extracted
 **Description:** Move crossover out of `_next_generation` into `_crossover(p1, p2, swap_rate, crossover_rate, rng)`. Add `crossover_swap_rate: float | None = None` to `GeneticAlgorithm`. `None` means 1/n_params, which is today's behaviour. Validate the range `[0, 1]`.
 **Acceptance criteria:**
-- [ ] With `crossover_swap_rate=None`, a seeded run is identical to an explicit `1/n_params` and to the pre-change code (same Result and history)
-- [ ] `_crossover` swaps genes at the configured rate (measured within ±10%), never swaps when `crossover_rate=0`, and children always contain exactly the parents' genes
-- [ ] Out-of-range values raise `ValueError` naming `crossover_swap_rate`
+- [x] With `crossover_swap_rate=None`, a seeded run is identical to an explicit `1/n_params` and to the pre-change code (same Result and history)
+- [x] `_crossover` swaps genes at the configured rate (measured within ±10%), never swaps when `crossover_rate=0`, and children always contain exactly the parents' genes
+- [x] Out-of-range values raise `ValueError` naming `crossover_swap_rate`
 **Verification:** `pytest -q`, lint, mypy
 **Dependencies:** None
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`
