@@ -51,16 +51,16 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 5: Executor, on_error, logging
 **Description:** `executor=` (any `concurrent.futures.Executor`, `map` in submission order) and `on_error="raise"|"worst"|"retry"` + `max_retries` (004 §4). Stdlib `logging.getLogger("geneopt")`: INFO per generation and at the end, DEBUG per evaluation. No handlers are added.
 **Acceptance criteria:**
-- [ ] Same seed → `Result`/history identical with `executor=None` and `ThreadPoolExecutor(4)`
-- [ ] `worst`: failures scored as worst, not cached, and warned. `raise`: rows evaluated before the failure are on disk
-- [ ] A full run with logging at WARNING emits no records
+- [x] Same seed → `Result`/history identical with `executor=None` and `ThreadPoolExecutor(4)`
+- [x] `worst`: failures scored as worst, not cached, and warned. `raise`: rows evaluated before the failure are on disk
+- [x] A full run with logging at WARNING emits no records
 **Verification:** `pytest tests/test_engine.py`
 **Dependencies:** 4
 **Files:** `geneopt/core.py`, `tests/test_engine.py`
 **Scope:** S
 
 ## Checkpoint B
-- [ ] `pytest` green. 011 criteria 1, 2, 4, 5 pass
+- [x] `pytest` green. 011 criteria 1, 2, 4, 5 pass
 
 ## Task 6: Plots + evaluations()
 **Description:** `geneopt/plots.py`: `diversity(genomes)` in [0,1], plus best-so-far, best params, diversity, gene-frequency heatmap, cache-hit rate and lazily-imported feature analysis (finite-only, numeric-only, catboost optional). `ga.plot(output_dir=None, dpi=150, show=False)` → `{name: path|Exception}`, with descriptive filenames under `{cache_dir}/{name}-plots/` or `./{name}-plots/`. `ga.evaluations()` → DataFrame of unique evaluated points.

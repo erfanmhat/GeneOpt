@@ -38,10 +38,10 @@ package is deleted only in the final task.
 ### Phase 2: Core
 - [x] Task 3: `History` + `Result` types
 - [x] Task 4: `GeneticAlgorithm` sequential run (integer genomes, operators, validation)
-- [ ] Task 5: Executor + `on_error` policy + logging
+- [x] Task 5: Executor + `on_error` policy + logging
 
 ### Checkpoint B
-- [ ] Same seed → identical `Result` with and without executor. 011 kwarg tests green
+- [x] Same seed → identical `Result` with and without executor. 011 kwarg tests green
 
 ### Phase 3: Surface
 - [ ] Task 6: Plots + `evaluations()` / `to_frame()`
