@@ -44,7 +44,7 @@ package is deleted only in the final task.
 - [x] Same seed → identical `Result` with and without executor. 011 kwarg tests green
 
 ### Phase 3: Surface
-- [ ] Task 6: Plots + `evaluations()` / `to_frame()`
+- [x] Task 6: Plots + `evaluations()` / `to_frame()`
 - [ ] Task 7: Examples (quickstart, categorical, distributed_http)
 - [ ] Task 8: Delete 1.x package and files, rewrite README, CHANGELOG
 

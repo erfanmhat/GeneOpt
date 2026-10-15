@@ -65,9 +65,9 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 6: Plots + evaluations()
 **Description:** `geneopt/plots.py`: `diversity(genomes)` in [0,1], plus best-so-far, best params, diversity, gene-frequency heatmap, cache-hit rate and lazily-imported feature analysis (finite-only, numeric-only, catboost optional). `ga.plot(output_dir=None, dpi=150, show=False)` → `{name: path|Exception}`, with descriptive filenames under `{cache_dir}/{name}-plots/` or `./{name}-plots/`. `ga.evaluations()` → DataFrame of unique evaluated points.
 **Acceptance criteria:**
-- [ ] `diversity` is 0 for identical genomes and in [0,1] in general. Gene-frequency rows sum to 1
-- [ ] `ga.plot()` writes non-empty PNGs with the expected names. A minimize run with `+inf` scores still produces the feature plots
-- [ ] A missing catboost only drops the analysis plots, with an `ImportError` recorded in the result dict
+- [x] `diversity` is 0 for identical genomes and in [0,1] in general. Gene-frequency rows sum to 1
+- [x] `ga.plot()` writes non-empty PNGs with the expected names. A minimize run with `+inf` scores still produces the feature plots
+- [x] A missing catboost only drops the analysis plots, with an `ImportError` recorded in the result dict
 **Verification:** `MPLBACKEND=Agg pytest tests/test_plots.py`
 **Dependencies:** 4
 **Files:** `geneopt/plots.py`, `geneopt/core.py`, `tests/test_plots.py`
