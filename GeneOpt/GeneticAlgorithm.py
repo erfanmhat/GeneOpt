@@ -581,7 +581,7 @@ class GeneticAlgorithm:
         data = df.drop(df.columns[-1:], axis=1)
         features = df.columns[:-2]
         target = df.columns[-2]
-        data.replace([-np.inf], np.NaN, inplace=True)
+        data.replace([-np.inf], np.nan, inplace=True)
         data.dropna(axis=0, inplace=True)
 
         data.columns = data.columns.map(lambda s: s.replace("_", " "))
