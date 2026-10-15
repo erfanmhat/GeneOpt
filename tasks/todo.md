@@ -1,99 +1,79 @@
-# GeneOpt 2.0.0 — Task List
+# Spec 007 — Task List
 
-Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the `build` tool isn't installed. pip builds in isolation)
+Tests: `python -m pytest -q` · Core-only: `pytest -m "not plots"` in a numpy-only venv ·
+Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python -m build` + `twine check`
+(scratch venv)
 
-## Task 1: Packaging skeleton + repo hygiene
-**Description:** Add a PEP 621 `pyproject.toml` (hatchling, numpy-only core, `[plots]`/`[analysis]`/`[dev]` extras, Python ≥ 3.10), a `geneopt/__init__.py` with `__version__ = "2.0.0"`, and `tests/`. Delete `setup.py`, `build/`, `dist/`, `GeneOpt.egg-info/` and all tracked `__pycache__/` from git. Extend `.gitignore`.
+## Task 1: Core vs plots test split
+**Description:** Register a `plots` marker in pyproject. Mark every test that needs pandas, matplotlib or catboost (History.to_frame, evaluations, plots, the quickstart example). Add `hypothesis`, `ruff`, `mypy` and `pytest-cov` to the `dev` extra.
 **Acceptance criteria:**
-- [x] `git ls-files | grep -E '(^build/|^dist/|egg-info|__pycache__|\.pyc$|^setup\.py$)'` is empty
-- [x] `import geneopt; geneopt.__version__ == "2.0.0"`, and importing it creates no files and doesn't import matplotlib/pandas
-- [x] `python -m build` produces a wheel that contains `geneopt/`
-**Verification:** `pytest tests/test_api.py` · `python -m build`
+- [ ] In a fresh venv with only `.[dev]`, `pytest -m "not plots"` passes, with no import errors and no skips caused by missing modules
+- [ ] With `.[dev,analysis]`, `pytest -m plots` passes, and the full `pytest` count equals the sum of the two
+- [ ] An unregistered marker is an error (`--strict-markers`)
+**Verification:** both venv runs
 **Dependencies:** None
-**Files:** `pyproject.toml`, `.gitignore`, `geneopt/__init__.py`, `tests/test_api.py`, deletions
+**Files:** `pyproject.toml`, `tests/test_history.py`, `tests/test_plots.py`, `tests/test_examples.py`
 **Scope:** S
 
-## Task 2: GenomeCache
-**Description:** `geneopt/cache.py`: `GenomeCache(path|None, fingerprint)` with dict storage keyed by index tuples. `fingerprint(env, fn, objective_version)`. Append-only JSONL (header line + one record per put, `.item()` for numpy). A truncated last line is skipped with a warning. Fingerprint mismatch → `CacheMismatchError`. 1.x CSV/JSON files are never opened. NaN scores rejected.
+## Task 2: Lint & types
+**Description:** Configure ruff (lint + format, line length 110) and mypy for `geneopt` in pyproject. Add `geneopt/py.typed` and include it in the wheel. Fix every finding without suppressions; if a suppression is unavoidable, it gets an inline reason.
 **Acceptance criteria:**
-- [x] GC-1 (1_000_000 vs 1_000_005 distinct), GC-5 (params named score/generation), GC-6 (string values), GC-8 (np.int64) round-trip through disk
-- [x] A changed env / objective body / `objective_version` → different fingerprint (GC-2/GC-3). Truncated tail loads with one warning (GC-10)
-- [x] 10⁵ put+get < 1 s (GC-9)
-**Verification:** `pytest tests/test_cache.py`
+- [ ] `ruff check .`, `ruff format --check .` and `mypy geneopt` exit 0
+- [ ] The wheel contains `geneopt/py.typed`
+- [ ] Test suite still green
+**Verification:** scratch venv with `.[dev]`
 **Dependencies:** 1
-**Files:** `geneopt/cache.py`, `tests/test_cache.py`
-**Scope:** S
-
-## Checkpoint A
-- [x] `pytest` green, `python -m build` OK
-
-## Task 3: History + Result
-**Description:** `geneopt/history.py`: `History` (per-generation genomes/scores/hits arrays, `append`, `to_frame(env)` with lazy pandas). `Result` frozen dataclass in `geneopt/core.py` (010), with Python-native values via `_to_python`.
-**Acceptance criteria:**
-- [x] `History.to_frame` returns one row per individual per generation, with a `cache_hit` column
-- [x] `json.dumps(dataclasses.asdict(Result(...)))` works for numpy values. `Result` isn't iterable
-**Verification:** `pytest tests/test_history.py tests/test_result.py`
-**Dependencies:** 1
-**Files:** `geneopt/history.py`, `geneopt/core.py`, tests
-**Scope:** S
-
-## Task 4: GeneticAlgorithm — sequential run
-**Description:** `GeneticAlgorithm(objective_func, environment, *, …)` with the 005 §1 signature minus `executor`/`on_error` (Task 5). Construction-time validation (005 §2). Integer genomes, uniform init, crossover by gene mask, single-gate mutation with creep for ordered numeric params, adaptive rate from normalised diversity, exact-k tournament, elitism, `sign` comparisons, early stopping `>=`, `target_score` checked per generation (003, 010). The loop goes through the cache with in-generation dedupe and appends to the history. `start()` returns `Result` and sets `ga.result`/`ga.history`.
-**Acceptance criteria:**
-- [x] Every 1.x kwarg in 011 raises `TypeError`. Bad inputs raise with the parameter name
-- [x] 20 identical genomes → 1 objective call (GC-7). The history has pop rows for every generation (H-1). Init over 5 values is uniform (E-1)
-- [x] Convergence: a 2-D bowl optimum and a categorical toy optimum are found within budget. Elitism → monotonic best. `population_size=101` is kept. Warm disk cache rerun → 0 calls, same result
-**Verification:** `pytest tests/test_core.py tests/test_api.py`
-**Dependencies:** 2, 3
-**Files:** `geneopt/core.py`, `geneopt/__init__.py`, `tests/test_core.py`, `tests/test_api.py`
+**Files:** `pyproject.toml`, `geneopt/*.py`, `geneopt/py.typed`, `tests/*.py`, `examples/**` (format only)
 **Scope:** M
 
-## Task 5: Executor, on_error, logging
-**Description:** `executor=` (any `concurrent.futures.Executor`, `map` in submission order) and `on_error="raise"|"worst"|"retry"` + `max_retries` (004 §4). Stdlib `logging.getLogger("geneopt")`: INFO per generation and at the end, DEBUG per evaluation. No handlers are added.
+## Checkpoint A
+- [ ] Core suite green numpy-only. Lint and types clean
+
+## Task 3: Ledger coverage + property tests
+**Description:** `tests/test_ledger.py` parses the ledger IDs from `specs/README.md` and requires a `test_<ID>_*` for each one (ID with `-` → `_`). Rename existing tests that already cover an ID, and add missing ones (GC-2, 4, 5, 6, 8, 11, H-2, 3, 5, E-2, 3, 4, 5, A-1, 2, 3, 4, X-3). Hypothesis tests: best-so-far monotonic over seeds, cache round-trip of arbitrary JSON-able values, uniform initial sampling for sizes 2..300 (chi-square).
 **Acceptance criteria:**
-- [x] Same seed → `Result`/history identical with `executor=None` and `ThreadPoolExecutor(4)`
-- [x] `worst`: failures scored as worst, not cached, and warned. `raise`: rows evaluated before the failure are on disk
-- [x] A full run with logging at WARNING emits no records
-**Verification:** `pytest tests/test_engine.py`
-**Dependencies:** 4
-**Files:** `geneopt/core.py`, `tests/test_engine.py`
+- [ ] `test_ledger.py` passes, and fails if a ledger row is added without a test (checked by a negative self-test)
+- [ ] Every new test asserts the 2.0 behaviour that contradicts the verified 1.x behaviour in the ledger
+- [ ] The property tests run within the default hypothesis budget, in under 10 s total
+**Verification:** `pytest -q`
+**Dependencies:** 1
+**Files:** `tests/test_ledger.py`, `tests/test_*.py`
+**Scope:** M
+
+## Task 4: Coverage bar
+**Description:** Measure line coverage of `geneopt/cache.py` and `geneopt/core.py` from the core suite. Add tests for any uncovered branches that matter. Enforce the bar with `coverage report --include=geneopt/cache.py,geneopt/core.py --fail-under=90`.
+**Acceptance criteria:**
+- [ ] ≥ 90% line coverage on each of the two files
+- [ ] The enforcement command exits non-zero when the bar is broken (checked once by lowering coverage locally, not committed)
+**Verification:** scratch venv `pytest --cov`
+**Dependencies:** 3
+**Files:** `tests/*.py`, `pyproject.toml`
 **Scope:** S
 
 ## Checkpoint B
-- [x] `pytest` green. 011 criteria 1, 2, 4, 5 pass
+- [ ] All ledger IDs tested. Coverage bar met
 
-## Task 6: Plots + evaluations()
-**Description:** `geneopt/plots.py`: `diversity(genomes)` in [0,1], plus best-so-far, best params, diversity, gene-frequency heatmap, cache-hit rate and lazily-imported feature analysis (finite-only, numeric-only, catboost optional). `ga.plot(output_dir=None, dpi=150, show=False)` → `{name: path|Exception}`, with descriptive filenames under `{cache_dir}/{name}-plots/` or `./{name}-plots/`. `ga.evaluations()` → DataFrame of unique evaluated points.
+## Task 5: Competitor benchmark
+**Description:** `tests/bench/run.py` covers the three problems from 003 (Holder 2-D 4096² / 2,000 unique evals; Rastrigin 10-D × 256 / 5,000; categorical 6 × 5 labels / 500, hit rate). It runs seven optimisers: GeneOpt, random search, PyGAD, DEAP, pymoo GA, Optuna TPE and Nevergrad NGOpt, each as a small adapter. A shared memoising budget wrapper stops each run after N unique evaluations (with a 50 × N total-call cap). Seeds 0…N-1. Pins go in `tests/bench/requirements.txt`. Output is a Markdown table per problem (median, IQR or hit rate, unique evals, wall time). Crashes show as `crashed: …`.
 **Acceptance criteria:**
-- [x] `diversity` is 0 for identical genomes and in [0,1] in general. Gene-frequency rows sum to 1
-- [x] `ga.plot()` writes non-empty PNGs with the expected names. A minimize run with `+inf` scores still produces the feature plots
-- [x] A missing catboost only drops the analysis plots, with an `ImportError` recorded in the result dict
-**Verification:** `MPLBACKEND=Agg pytest tests/test_plots.py`
-**Dependencies:** 4
-**Files:** `geneopt/plots.py`, `geneopt/core.py`, `tests/test_plots.py`
+- [ ] `python tests/bench/run.py --seeds 30` prints all 7 × 3 results. `--only` and `--quick` work
+- [ ] `tests/test_bench.py` (`-m bench`, deselected by default) runs `--quick`, and also unit-tests the budget wrapper (unique counting, stop, cap)
+- [ ] Results + seed count + library versions recorded in `specs/007-tests-and-ci.md` § Benchmark results. 003 hard gate (beats random search everywhere) checked. **If it fails → stop and report**
+**Verification:** full local run in a scratch venv
+**Dependencies:** 2
+**Files:** `tests/bench/run.py`, `tests/bench/requirements.txt`, `tests/test_bench.py`, `pyproject.toml` (marker), `specs/007-tests-and-ci.md`
 **Scope:** M
 
-## Task 7: Examples
-**Description:** `examples/quickstart.py` (Holder table), `examples/categorical.py`, and `examples/distributed_http/{objective,server,client,run_servers}.py` per 008/009 (stdlib client with bounded retries and 0.0-safe; server with `debug=False` and signature-checked JSON params; `run_servers.py` using `sys.executable`). Move `image/` → `docs/images/`.
+## Task 6: CI workflow
+**Description:** `.github/workflows/ci.yml` with jobs lint, test (3.10–3.13 × ubuntu/windows/macos, core only), test-plots (+ coverage gate), build (+twine check), publish (tag `v*`, trusted publishing, `id-token: write`, environment `pypi`), and bench (`workflow_dispatch` + PRs labelled `perf`, installing `tests/bench/requirements.txt` and posting the table as a PR comment).
 **Acceptance criteria:**
-- [x] Client against a stdlib stub: `0.0` returned after 1 request. 400 → `ObjectiveError` after 1 request. 503,503,200 → score after 3 requests
-- [x] Server param validation rejects missing/unknown params and decodes JSON values (tested as a pure function, no Flask needed)
-- [x] `quickstart.py` and `categorical.py` run in tests with tiny budgets. There's no `debug=True` anywhere
-**Verification:** `pytest tests/test_examples.py`
-**Dependencies:** 5
-**Files:** `examples/**`, `tests/test_examples.py`, `docs/images/*` (moved)
-**Scope:** M
-
-## Task 8: Delete 1.x, README, CHANGELOG
-**Description:** Delete `GeneOpt/`, `main.py`, `main2.py`, `server.py`, `RunNServers.py`. Rewrite the README for the 2.0 API (no before/after). Add a `CHANGELOG.md` 2.0.0 entry that links to spec 011.
-**Acceptance criteria:**
-- [x] `import GeneOpt` → `ModuleNotFoundError`. `grep -rnE "DeprecationWarning|_compat|_LEGACY" geneopt/` is empty
-- [x] Every code block in the README is either an embedded example file or runs as written
-- [x] `python -m build && twine check dist/*` pass (run in a scratch venv: sdist + wheel PASSED)
-**Verification:** full `pytest` · build · twine check
-**Dependencies:** 6, 7
-**Files:** deletions, `README.md`, `CHANGELOG.md`
-**Scope:** M
+- [ ] actionlint reports no errors
+- [ ] Every command in the workflow was run locally on Linux. The test job passes on Python 3.10, 3.12 and 3.13 (uv venvs)
+- [ ] Publish runs only on `v*` tags, after the other jobs, with least-privilege permissions
+**Verification:** actionlint + local commands
+**Dependencies:** 4, 5
+**Files:** `.github/workflows/ci.yml`, `specs/007-tests-and-ci.md` (criteria wording per the approval decisions)
+**Scope:** S
 
 ## Checkpoint C
-- [x] All spec 011 acceptance criteria met. `pytest` green. Build clean
+- [ ] All spec 007 criteria met or explicitly re-scoped
