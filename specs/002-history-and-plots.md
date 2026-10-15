@@ -29,6 +29,8 @@ So in practice:
 ```python
 @dataclass
 class History:
+    environment: dict           # name -> values, used to decode genomes
+    maximize: bool              # direction, needed for best-so-far
     genomes: list[np.ndarray]   # per generation: (pop, n_params) int index array
     scores:  list[np.ndarray]   # per generation: (pop,) float
     hits:    list[np.ndarray]   # per generation: (pop,) bool, served from cache
@@ -37,10 +39,11 @@ class History:
 - The engine (004) appends one entry per generation **after** scoring, so cache hits are
   recorded like any other individual. That fixes H-1.
 - Memory: `gens × pop × n_params × 8 B`. 1,000 × 1,000 × 20 = 160 MB is the ceiling to
-  document. Store `int32` when every env size is < 2³¹, which halves it.
+  document. *(not built yet)* Storing `int32` when every env size is < 2³¹ would halve it.
 - `to_frame()` → long DataFrame `(generation, individual, <param values…>, score, cache_hit)`
   for anyone who wants pandas. It's built on demand, never stored.
-- `save(path)` → `np.savez_compressed`. It's opt-in, so runs don't write files unless asked.
+- *(not built yet)* `save(path)` → `np.savez_compressed`. It's opt-in, so runs don't write files
+  unless asked.
 
 The evaluated-points table that feature analysis needs is just the cache (001), exposed as
 `ga.evaluations()` → DataFrame `(<param values…>, score)`. It's a different question ("what does the
@@ -71,7 +74,7 @@ different source.
 
 ### 4. Output
 
-- `plot(output_dir=None, dpi=150, show=False)`. The default is `{cache_dir}/{optimizer_name}-plots/`, or
+- `plot(output_dir=None, dpi=150)`. The default is `{cache_dir}/{optimizer_name}-plots/`, or
   the current directory if there's no cache dir. No more hard-coded `./cache/`.
 - File names describe the plot: `best_score.png`, `param_x1.png`, `diversity.png`,
   `gene_freq_x1.png`, `corr_with_score.png` … (not `0.png … 37.png`, which overwrite across runs).
@@ -82,9 +85,11 @@ different source.
 - Each plot runs in its own `try`. A failure is logged with the plot name and the rest
   continue. `plot()` returns `{name: path | Exception}`. Remove the `raise e` + dead
   `log_e` (H-5).
-- Use the `fig, ax = plt.subplots()` style. The current pyplot-global style leaks state
-  between plots (seaborn `jointplot` makes its own figure and the first `plt.title` lands on
-  the wrong axes).
+- Use matplotlib's object-oriented `matplotlib.figure.Figure` without pyplot. The 1.x
+  pyplot-global style leaks state between plots (seaborn `jointplot` makes its own figure, so the
+  first `plt.title` lands on the wrong axes). A bare `Figure` also needs no GUI backend.
+- Everything is drawn with matplotlib alone, so seaborn isn't a dependency. The KDE joint plot
+  is dropped.
 
 ## Acceptance criteria
 

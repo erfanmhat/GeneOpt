@@ -57,7 +57,9 @@ class ObjectiveError(RuntimeError):
     """The server answered, but the evaluation itself failed. Not retried."""
 
 def remote_score(port: int, params: dict, retries: int = 3, timeout: float = 1800) -> float:
-    url = f"http://127.0.0.1:{port}/run_objective?{urllib.parse.urlencode(params)}"
+    query = urllib.parse.urlencode({k: json.dumps(v.item() if isinstance(v, np.generic) else v)
+                                    for k, v in params.items()})   # JSON values, see 009
+    url = f"http://127.0.0.1:{port}/run_objective?{query}"
     for attempt in range(retries + 1):
         try:
             with urllib.request.urlopen(url, timeout=timeout) as r:
@@ -69,7 +71,8 @@ def remote_score(port: int, params: dict, retries: int = 3, timeout: float = 180
             err = e                                      # 5xx: the server may recover
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             err = e                                      # network: retry
-        time.sleep(min(2 ** attempt, 30))
+        if attempt < retries:                            # no pointless sleep before giving up
+            time.sleep(min(2 ** attempt, 30))
     raise ObjectiveError(f"gave up after {retries + 1} attempts for {params}") from err
 ```
 

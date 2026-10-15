@@ -48,6 +48,7 @@ GeneticAlgorithm(
     objective_version: str | None = None,
     executor: Executor | None = None,
     on_error: Literal["raise", "worst", "retry"] = "raise",
+    max_retries: int = 2,
     seed: int | None = 0,
 )
 ```
@@ -112,7 +113,7 @@ geneopt/
 
 - Package import name `geneopt` (lowercase, PEP 8). The `GeneOpt` package is deleted, with no
   re-export shim (011). The PyPI distribution name stays `GeneOpt`.
-- `matplotlib`/`seaborn` are imported inside `plots.py` functions, so `import geneopt` stays
+- `matplotlib` (and `catboost` for the analysis plots) are imported inside `plots.py` functions, so `import geneopt` stays
   fast and works headless.
 - Add a `py.typed` marker and full annotations.
 

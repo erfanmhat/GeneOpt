@@ -42,7 +42,7 @@ class Result:
     n_evaluations: int           # unique objective calls in this run
     n_cache_hits: int            # individuals served from cache in this run
     elapsed: float               # seconds, perf_counter
-    stopped_by: Literal["generations", "early_stopping", "target_score", "callback"]
+    stopped_by: Literal["generations", "early_stopping", "target_score"]   # + "callback" if 005 §5 lands
 ```
 
 - **No tuple unpacking.** `best, score = ga.start()` is removed in 2.0.0 (see 011). Use

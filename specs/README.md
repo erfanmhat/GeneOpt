@@ -82,4 +82,4 @@ IDs are referenced across specs. "Verified" means it was reproduced with a scrip
 
 Everything ships as **2.0.0**, a hard break. Every 1.x parameter, module, enum and helper is
 deleted, with no deprecation period (see [011](011-removed-in-2.0.md)). 003 changes search
-behaviour, so ship it with before/after benchmark numbers (see 007).
+behaviour, so it ships with benchmark numbers against other optimisation libraries (see 007).

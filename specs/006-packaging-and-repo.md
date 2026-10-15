@@ -36,9 +36,9 @@ authors = [{ name = "Erfan Mahdavi Athar" }]
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
-plots    = ["matplotlib>=3.7", "seaborn>=0.12", "pandas>=2.0"]
+plots    = ["matplotlib>=3.7", "pandas>=2.0"]
 analysis = ["GeneOpt[plots]", "catboost>=1.2"]
-dev      = ["pytest>=8", "hypothesis>=6", "ruff>=0.6", "mypy>=1.10"]
+dev      = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6", "ruff>=0.6", "mypy>=1.10"]
 
 [project.urls]
 Source = "https://github.com/erfanmhat/GeneOpt"
@@ -101,8 +101,20 @@ README.md
   and states clearly that **1.x CSV caches are not reused**.
 - Tag `v2.0.0`. Publish from CI with PyPI trusted publishing when a tag is pushed, not from a
   laptop. That way `dist/` never needs to exist in the repo.
-- `__version__` comes from `importlib.metadata.version("GeneOpt")`, so there's a single source
-  of truth.
+- `__version__ = "2.0.0"` lives in `geneopt/__init__.py`, and hatchling reads it from there
+  (`[tool.hatch.version] path`). It's a single source of truth that also works uninstalled.
+  `importlib.metadata` would need an install, so tests running from a checkout would break.
+
+### 5. Case-only rename hazard
+
+`GeneOpt/` → `geneopt/` differs only in case. This repo had `core.ignorecase=true` on a
+case-sensitive filesystem, so `git add geneopt/x.py` was recorded under the existing `GeneOpt/`
+path and `geneopt/__init__.py` was skipped. Six commits went in without an importable package
+before it was caught.
+- Run `git config core.ignorecase false` on Linux checkouts, or use `git -c core.ignorecase=false`
+  for the rename commits.
+- Verify the result from a clean checkout (`git worktree add`), not the working tree. The working
+  tree was correct the whole time, so the tests passed.
 
 ## Acceptance criteria
 

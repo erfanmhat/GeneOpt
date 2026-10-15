@@ -76,13 +76,18 @@ A persisted score is only valid for the same **search space** and the same **obj
 fingerprint = sha256(json.dumps({
     "env": {name: [repr(v) for v in values] for name, values in sorted(env.items())},
     "objective": f"{fn.__module__}.{fn.__qualname__}",
-    "objective_code": sha256(fn.__code__.co_code + repr(fn.__code__.co_consts)) if has_code else None,
+    "objective_code": code_digest(fn.__code__) if has_code else None,  # see below
     "objective_version": objective_version,     # new optional user param, str
 }, sort_keys=True)).hexdigest()[:16]
 ```
 
 - Cache file: `{cache_dir}/{optimizer_name}-{fingerprint}.jsonl`. A changed environment or
   function body gets a fresh file automatically. Old files stay on disk and nothing is deleted.
+- `code_digest` hashes `co_code`, `co_names` and `co_consts`, and recurses into nested code objects
+  instead of using their `repr`. The `repr` of a code object embeds its memory address, so a naive
+  `repr(co_consts)` gives a different fingerprint on every run whenever the objective contains a
+  lambda or inner function. `co_names` is needed because `np.sin(x)` and `np.cos(x)` compile to
+  the same `co_code` and differ only in the names they reference.
 - `co_code` only covers the function's own body, not functions it calls. For those cases,
   `objective_version="2"` is the documented manual switch.
 - Bytecode differs between Python versions, so upgrading Python means a cold cache. That's a
@@ -103,8 +108,9 @@ fingerprint = sha256(json.dumps({
 - `v` (decoded values) is only there so people can read the file. It's serialised with
   `default=_jsonable` (`np.generic → .item()`, anything else → `repr`), which fixes GC-8.
 - One `write()` + `flush()` per record, done by appending. No full rewrite, so GC-10 goes away.
-- On load, a truncated last line (crash mid-write) is skipped with a warning. Every other line
-  must parse.
+- On load, a truncated last line (crash mid-write) is skipped with a warning **and cut from the
+  file**. Otherwise the next append would join the partial line and corrupt a middle record.
+  Every other line must parse. An empty file (crash while writing the header) is re-initialised.
 - Why JSONL and not CSV/pickle/sqlite: it's stdlib, append-safe, mixed-type, readable with
   `pandas.read_json(lines=True)`, and has no schema migrations. sqlite is the upgrade path if
   caches go past ~10⁷ rows.

@@ -21,33 +21,48 @@ objective servers. It has these problems:
 ### `examples/distributed_http/server.py`
 
 ```python
-"""One objective evaluation per request. Run one process per CPU core / GPU."""
+"""Serve one objective evaluation per request: GET /run_objective?x1=0.5&x2=-3"""
 import inspect, json, sys
-from flask import Flask, jsonify, request
 
 from objective import objective          # the user's function, in its own module
 
-app = Flask(__name__)
-PARAMS = inspect.signature(objective).parameters
+PARAMS = set(inspect.signature(objective).parameters)
 
 
-@app.get("/run_objective")
-def run_objective():
-    unknown = request.args.keys() - PARAMS.keys()
-    missing = PARAMS.keys() - request.args.keys()
+def parse_params(args) -> dict:
+    """Validate query args against the objective's signature and JSON-decode them."""
+    unknown, missing = set(args) - PARAMS, PARAMS - set(args)
     if unknown or missing:
-        return jsonify(error=f"unknown={sorted(unknown)} missing={sorted(missing)}"), 400
-    try:
-        params = {k: json.loads(v) for k, v in request.args.items()}   # numbers, strings, bools
-    except json.JSONDecodeError as e:
-        return jsonify(error=f"bad value: {e}"), 400
-    return jsonify(score=float(objective(**params)))
+        raise ValueError(f"unknown={sorted(unknown)} missing={sorted(missing)}")
+    params = {}
+    for name, raw in args.items():
+        try:
+            params[name] = json.loads(raw)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"{name}: value {raw!r} is not JSON ({e})") from None
+    return params
+
+
+def create_app():
+    from flask import Flask, jsonify, request    # imported here so parse_params is testable without flask
+
+    app = Flask(__name__)
+
+    @app.get("/run_objective")
+    def run_objective():
+        try:
+            params = parse_params(request.args.to_dict())
+        except ValueError as e:
+            return jsonify(error=str(e)), 400
+        return jsonify(score=float(objective(**params)))
+
+    return app
 
 
 if __name__ == "__main__":
     # threaded=False: one evaluation at a time per process. Parallelism comes from running
     # several processes (run_servers.py), not threads, so CPU-bound objectives aren't GIL-bound.
-    app.run(host="127.0.0.1", port=int(sys.argv[1]), debug=False, threaded=False)
+    create_app().run(host="127.0.0.1", port=int(sys.argv[1]), debug=False, threaded=False)
 ```
 
 - **`debug=False`, `host="127.0.0.1"` written out explicitly** (9a, 9b). The README section on
@@ -67,8 +82,11 @@ if __name__ == "__main__":
 
 ```python
 import subprocess, sys
+from pathlib import Path
 n, base = int(sys.argv[1]), int(sys.argv[2]) if len(sys.argv) > 2 else 5000
-procs = [subprocess.Popen([sys.executable, "server.py", str(base + i)]) for i in range(n)]
+here = Path(__file__).resolve().parent
+procs = [subprocess.Popen([sys.executable, "server.py", str(base + i)], cwd=here) for i in range(n)]
+codes = []                      # defined before try: Ctrl-C during wait() must not hit a NameError
 try:
     codes = [p.wait() for p in procs]
 finally:
@@ -77,7 +95,8 @@ finally:
 sys.exit(max(codes, default=0))
 ```
 
-- `sys.executable` (the venv-correct interpreter) and a configurable base port.
+- `sys.executable` (the venv-correct interpreter) and a configurable base port. `cwd` is the
+  script's own directory, so it can be started from anywhere.
 - Ctrl-C or a child exit terminates the whole group, so no orphaned servers keep holding ports.
 
 ## Acceptance criteria

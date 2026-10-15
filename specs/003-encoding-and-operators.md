@@ -78,11 +78,13 @@ init   = rng.integers(0, sizes, size=(pop, n_params))   # uniform, no bias (E-1 
 
 ```python
 d = normalised_diversity(pop)               # [0, 1], see 002
-rate = base + (max_rate - base) * (1 - d)   # low diversity → more mutation
+ceiling = max(MAX_MUTATION_RATE, base)    # MAX_MUTATION_RATE = 0.5, a module constant
+rate = base + (ceiling - base) * (1 - d)   # low diversity → more mutation
 ```
 
-- `max_rate` defaults to `0.5`. `adaptive_mutation: bool = True`.
-- Clamped to `[base, max_rate]` by construction, so it can't exceed 1.
+- `adaptive_mutation: bool = True`. The ceiling is a constant, not a parameter. Nobody has asked
+  to tune it.
+- Clamped to `[base, ceiling]` by construction, so it can't exceed 1.
 
 ### 3. Selection: one function, exact tournament
 
@@ -93,7 +95,9 @@ def tournament(scores, k, rng, better):   # returns index
 ```
 
 - Exactly `k` candidates. With-replacement only when it's required, with no exception or log.
-- Vectorised: draw all `pop × k` candidates in one `rng.choice` and reduce with `argmax`/`argmin`.
+- One `rng.choice` per tournament, then the winners are reduced with a single `argmax` over the
+  `(m, k)` candidate matrix. Drawing *without replacement* per row has no single-call numpy
+  equivalent, and m ≈ population size, so the loop costs about a millisecond.
 
 ### 4. Elitism
 
@@ -113,24 +117,30 @@ def tournament(scores, k, rng, better):   # returns index
 
 ## Benchmark gate
 
-These changes alter search behaviour, so they ship with numbers (harness in 007):
+These changes alter search behaviour, so they ship with numbers. The comparison is against
+**other optimisation libraries**, not against 1.x. The harness, the competitors and the fairness
+rules are in [007 § Benchmarks](007-tests-and-ci.md#benchmarks-testsbenchrunpy).
 
-| Function | Budget | Metric |
+| Problem | Budget | Metric |
 |---|---|---|
 | Holder table (2-D, 4096²) | 2,000 unique evals | median best over 30 seeds |
 | Rastrigin (10-D, 256 values each) | 5,000 unique evals | median best over 30 seeds |
 | Categorical toy (6 params × 5 labels, known optimum) | 500 unique evals | hit rate of optimum |
 
-**Gate:** each metric is no worse than `1.0.10`. Also report the number of objective calls per
-generation, which should stay > 0 for longer than the current ~3 generations.
+**Gate (hard):** GeneOpt beats random search on every problem, by median best or by hit rate.
+A GA that can't beat random sampling at an equal budget is broken.
+
+**Reported, not gated:** GeneOpt's rank among the other libraries. A regression in rank between
+releases is investigated, but it doesn't block a release on its own. Model-based optimisers
+(TPE, NGOpt) are expected to win on small budgets.
 
 ## Acceptance criteria
 
 - [ ] 8,000 random initial genes over 5 values: each value 1,600 ± 150.
 - [ ] With `adaptive_mutation=False`, measured per-gene mutation frequency ≈ `mutation_rate` (±10%).
-- [ ] Adaptive rate stays within `[base, max_rate]` for any population.
+- [ ] Adaptive rate stays within `[base, max(0.5, base)]` for any population.
 - [ ] Tournament with `k > pop` logs nothing and returns a valid index.
 - [ ] With `elitism ≥ 1`, best-of-population is monotonic across generations.
 - [ ] `early_stopping_rounds=3` stops exactly 3 generations after the last improvement.
-- [ ] `number_of_population=101` → 101 individuals per generation.
-- [ ] Benchmark gate passes.
+- [ ] `population_size=101` → 101 individuals per generation.
+- [ ] Benchmark gate passes (beats random search on all three problems).

@@ -4,103 +4,120 @@
 
 ## Principle
 
-**Every bug ID in the ledger gets a test that fails on `1.0.10`** before the fix lands
-(Prove-It pattern). The test name contains the ID, so `pytest -k GC_7` finds it.
+**Every bug ID in the ledger has a regression test**, named `test_<ID>_*` (`GC-7` →
+`test_GC_7_*`), so `pytest -k GC_7` finds it. Each one asserts the 2.0 behaviour that contradicts
+the 1.0.10 behaviour recorded in the ledger. The 1.0.10 side is already proven by the
+reproductions inlined in specs 001–003 and 008, which were run against 1.0.10.
+
+> The suite can't run against 1.0.10 itself. After the hard break (011) it imports `geneopt`,
+> which 1.0.10 doesn't have, so every test would fail at import and prove nothing.
+
+`tests/test_ledger.py` makes this self-enforcing: it parses the ID column of
+[README.md](README.md) and fails if any ID has no matching test.
 
 ## Test files
 
 ```
 tests/
-  test_cache.py          # GC-1 … GC-11
-  test_history.py        # H-1 … H-4
-  test_operators.py      # E-1 … E-6
-  test_engine.py         # GC-7, A-1, A-2, determinism, error policy
+  test_cache.py          # GenomeCache: GC-1 … GC-10
+  test_history.py        # History                                   [plots]
+  test_result.py         # Result: A-1 / 010
+  test_core.py           # operators + GA loop: E-1 … E-6, GC-7, H-1, GC-3
+  test_engine.py         # executor determinism, on_error, logging
   test_api.py            # validation, removed 1.x kwargs raise TypeError (011), no import side effects
-  test_result.py         # A-1 / 010: one Result type in every mode
-  test_http_example.py   # X-1 / 008, X-2 / 009 against a stdlib http.server stub
-  test_examples.py       # runs examples/quickstart.py + categorical.py with tiny budgets
-  bench/run.py           # benchmark gate from 003 (not in the default pytest run)
+  test_plots.py          # H-2 … H-5, smoke test of every plot          [plots]
+  test_examples.py       # client X-1 / 008, server X-2 / 009, runnable examples
+  test_repo.py           # 1.x files gone, README code runs, CHANGELOG
+  test_ledger.py         # every ledger ID has a test
+  bench/                 # competitor benchmark (not collected by default)
 ```
 
-The tests use the stdlib (`tmp_path`, `monkeypatch`). The only extra dependency is
-`hypothesis`, used for the property tests marked ★.
+`[plots]` files and tests are marked `@pytest.mark.plots` because they need pandas or matplotlib.
+The core suite (`-m "not plots"`) needs only numpy and the `dev` extra.
 
-## Key tests (sketches)
+## Property tests (hypothesis)
 
-```python
-def test_GC_1_no_relative_tolerance_hits(tmp_path):
-    ga = make_ga({"x": [1_000_000.0, 1_000_005.0]}, cache_dir=tmp_path)
-    calls = run_with_population(ga, [[0], [1]])
-    assert calls == 2
+`hypothesis` is in the `dev` extra.
 
-def test_GC_3_changed_objective_gets_fresh_cache(tmp_path):
-    env = {"x": np.linspace(0, 1, 8)}
-    GeneticAlgorithm(lambda x: x,  env, cache_dir=tmp_path, generations=3).start()
-    r = GeneticAlgorithm(lambda x: -x, env, cache_dir=tmp_path, generations=3).start()
-    assert r.params["x"] == 0.0 and r.score == 0.0    # 1.0.10 returns x=1.0, score=1.0
-
-def test_GC_7_duplicates_evaluated_once(executor):    # parametrised: None, ThreadPool(4)
-    counter = Counter()
-    ga = make_ga(objective=counting(counter), executor=executor)
-    run_with_population(ga, [[3, 5]] * 20)
-    assert sum(counter.values()) == 1
-
-def test_H_1_history_has_every_individual():
-    ga = make_ga(population_size=20, generations=15); ga.start()
-    assert [len(s) for s in ga.history.scores] == [20] * 15
-
-★ def test_best_so_far_monotonic(seed): ...
-★ def test_cache_roundtrip_any_values(values: list[str | int | float | None]): ...
-★ def test_decode_uniform(n: int in 2..300): chi-square p > 0.001 over 20k draws
-
-def test_same_result_sequential_and_parallel():
-    a = make_ga(seed=7).start(); b = make_ga(seed=7, executor=ThreadPoolExecutor(4)).start()
-    assert replace(a, elapsed=0) == replace(b, elapsed=0)
-
-@pytest.mark.parametrize("kw", ["r_cross", "number_of_population", "cache_type", "verbose", ...])
-def test_removed_1x_kwargs_raise(kw):
-    with pytest.raises(TypeError, match=kw):
-        GeneticAlgorithm(f, env, **{kw: 1})
-
-def test_import_has_no_side_effects(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    subprocess.run([sys.executable, "-c", "import geneopt, sys; assert 'matplotlib' not in sys.modules"], check=True)
-    assert list(tmp_path.iterdir()) == []
-```
-
-`run_with_population(ga, pop)` is the one test helper: it seeds generation 0 with an explicit
-population (through `initial_population=` or a monkeypatched init). It's what made GC-7 easy
-to reproduce.
+- Best-so-far is monotonic for any seed and any `maximize`.
+- Cache round-trip through disk for arbitrary JSON-able values (str, int, float, bool, `None`).
+- Initial sampling is uniform for any parameter size in 2…300 (chi-square, p > 0.001, 20k draws).
 
 ## Benchmarks (`tests/bench/run.py`)
 
-- Runs the three problems from 003 × 30 seeds against **both** the installed `GeneOpt==1.0.10`
-  (in a separate venv) and the working tree.
-- Prints a Markdown table: median best, IQR, unique evaluations, wall time.
-- CI runs it on `workflow_dispatch` and on PRs labelled `perf`, then posts the table as a
-  PR comment.
+GeneOpt is compared against **other optimisation libraries** on the three problems from 003.
+
+| Optimiser | Library | Kind |
+|---|---|---|
+| GeneOpt | this repo | genetic algorithm |
+| Random search | numpy (in the harness) | baseline, sampling without a model |
+| `pygad.GA` | PyGAD | genetic algorithm |
+| `eaSimple` + tournament | DEAP | genetic algorithm (classic toolbox) |
+| `GA` with integer variables | pymoo | genetic algorithm |
+| `TPESampler` | Optuna | Bayesian / tree-structured Parzen estimator |
+| `NGOpt` | Nevergrad | algorithm-selecting meta-optimiser |
+
+**Fairness rules:**
+1. **Same search space.** Every optimiser sees the problem as `n` integer indices in `[0, size)`,
+   or as categorical choices where the library supports them (Optuna, Nevergrad).
+2. **Same budget, counted in *unique* evaluations.** A shared wrapper memoises the objective, so
+   re-evaluating a duplicate is free for every library (matching GeneOpt's cache). It records the
+   best score among the first N unique calls, then raises a sentinel that stops the run. Each
+   library is also capped at 50 × N total calls, so one that only re-proposes duplicates still
+   terminates.
+3. **Library defaults**, except population size: the GA libraries all get the same population (50)
+   and are told to run "forever" (the budget wrapper stops them). No per-problem tuning for anyone.
+4. **Seeds 0…29 for everyone.** Libraries that take a seed get it; the harness also seeds
+   `random` and `numpy` globally before each run.
+5. **Versions** are pinned in `tests/bench/requirements.txt` and printed in the report.
+
+**Output:** a Markdown table per problem, with these columns:
+- optimiser
+- median best and IQR (Holder, Rastrigin), or hit rate of the optimum (categorical)
+- median unique evaluations used
+- median wall time
+
+Crashes are shown as `crashed: <error>` instead of aborting the table.
+
+**Gate:** see [003 § Benchmark gate](003-encoding-and-operators.md#benchmark-gate). GeneOpt must
+beat random search on every problem; its rank among the other libraries is reported, not gated.
+
+**Running:** `pip install -e . -r tests/bench/requirements.txt`, then
+`python tests/bench/run.py --seeds 30`. The pins live in a requirements file, not a package
+extra, because users installing `GeneOpt` should never get pinned competitor libraries.
+`--quick` (2 seeds, 10% budget) is the pytest smoke test (`-m bench`, deselected by default).
+CI runs the full benchmark on `workflow_dispatch` and on PRs labelled `perf`, and posts the table
+as a PR comment.
 
 ## CI (`.github/workflows/ci.yml`)
 
 | Job | Matrix | Steps |
 |---|---|---|
 | lint | 3.12 | `ruff check`, `ruff format --check`, `mypy geneopt` |
-| test | 3.10 – 3.13 × {ubuntu, windows, macos} | `pip install -e .[dev]` → `pytest` (core, no plotting extras) |
-| test-plots | 3.12 ubuntu | `pip install -e .[dev,analysis]`, `MPLBACKEND=Agg pytest -m plots` |
+| test | 3.10 – 3.13 × {ubuntu, windows, macos} | `pip install -e .[dev]` → `pytest -m "not plots"` |
+| test-plots | 3.12 ubuntu | `pip install -e .[dev,analysis]`, `pytest -m plots` + coverage gate |
 | build | 3.12 | `python -m build`, `twine check dist/*` |
-| publish | on tag `v*` | trusted publishing to PyPI |
+| publish | on tag `v*`, after all of the above | trusted publishing to PyPI (`id-token: write`, environment `pypi`) |
+| bench | `workflow_dispatch`, PRs labelled `perf` | full benchmark, table posted as PR comment |
 
 Windows matters because the disk cache writes files (path handling, file locking on append).
 
 ## Coverage bar
 
-- `geneopt/cache.py`, `geneopt/core.py`: ≥ 90% line coverage. These are the parts that can
-  give wrong answers.
+- `geneopt/cache.py`, `geneopt/core.py`: ≥ 90% line coverage, enforced with
+  `coverage report --include=geneopt/cache.py,geneopt/core.py --fail-under=90`. These are the
+  parts that can give wrong answers.
 - `geneopt/plots.py`: smoke-tested only (each plot writes a non-empty PNG). No pixel tests.
 
 ## Acceptance criteria
 
-- [ ] Every ledger ID in `specs/README.md` matches at least one `test_<ID>_*`.
-- [ ] Checking out `1.0.10` and running the suite fails every `GC-*`/`H-*`/`E-*` test it can
-      import (proves the tests detect the bugs).
-- [ ] CI is green on the full matrix and takes < 5 min.
+- [ ] Every ledger ID in `specs/README.md` matches at least one `test_<ID>_*`, enforced by
+      `tests/test_ledger.py`, which also fails on a ledger row without a test.
+- [ ] The core suite passes with only `.[dev]` installed. `-m plots` passes with `.[dev,analysis]`.
+- [ ] `ruff check`, `ruff format --check`, `mypy geneopt` are clean. The coverage bar is met.
+- [ ] The benchmark produces the table for all seven optimisers × three problems, and the 003
+      gate passes.
+- [ ] The workflow passes actionlint. Every job's commands pass locally on Linux (Python 3.10,
+      3.12, 3.13).
+- [ ] CI is green on the full GitHub matrix and takes < 5 min. *(This needs a push. Verified on the
+      first run on GitHub.)*
