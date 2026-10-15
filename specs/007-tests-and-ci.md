@@ -165,9 +165,14 @@ Seeds: 30 · budget scale: 1 · Python 3.12.14 · GeneOpt 2.0.0, pygad 3.8.1, de
 | test-plots | 3.12 ubuntu | `pip install -e .[dev,analysis]`, `pytest -m plots` + coverage gate |
 | build | 3.12 | `python -m build`, `twine check dist/*` |
 | publish | on tag `v*`, after all of the above | trusted publishing to PyPI (`id-token: write`, environment `pypi`) |
-| bench | `workflow_dispatch`, PRs labelled `perf` | full benchmark, table posted as PR comment |
+| bench (`bench.yml`) | `workflow_dispatch`, PRs labelled `perf` | full benchmark, table posted as PR comment and job summary; fails on the 003 gate |
+
+The benchmark lives in its own workflow, `bench.yml`, because it triggers on PR *label* events.
+In `ci.yml` that trigger would re-run the whole matrix every time any label is added.
 
 Windows matters because the disk cache writes files (path handling, file locking on append).
+Subprocess tests must pass the parent environment through: Windows Python can't start without
+`SYSTEMROOT`.
 
 ## Coverage bar
 
@@ -178,13 +183,15 @@ Windows matters because the disk cache writes files (path handling, file locking
 
 ## Acceptance criteria
 
-- [ ] Every ledger ID in `specs/README.md` matches at least one `test_<ID>_*`, enforced by
+- [x] Every ledger ID in `specs/README.md` matches at least one `test_<ID>_*`, enforced by
       `tests/test_ledger.py`, which also fails on a ledger row without a test.
-- [ ] The core suite passes with only `.[dev]` installed. `-m plots` passes with `.[dev,analysis]`.
-- [ ] `ruff check`, `ruff format --check`, `mypy geneopt` are clean. The coverage bar is met.
-- [ ] The benchmark produces the table for all seven optimisers × three problems, and the 003
-      gate passes.
-- [ ] The workflow passes actionlint. Every job's commands pass locally on Linux (Python 3.10,
-      3.12, 3.13).
-- [ ] CI is green on the full GitHub matrix and takes < 5 min. *(This needs a push. Verified on the
-      first run on GitHub.)*
+- [x] The core suite passes with only `.[dev]` installed. `-m plots` passes with `.[dev,analysis]`.
+- [x] `ruff check`, `ruff format --check`, `mypy geneopt` are clean. The coverage bar is met: core
+      suite gives cache 99% / core 93%, full suite gives 100% / 99%.
+- [x] The benchmark produces the table for all seven optimisers × three problems, and the 003
+      gate passes (results above).
+- [x] Both workflows pass actionlint. Every job's commands pass locally on Linux: lint; test on
+      Python 3.10, 3.12 and 3.13; test-plots + coverage gate; build + twine check; bench.
+      `publish` can only run on GitHub.
+- [ ] CI is green on the full GitHub matrix and takes < 5 min. *(Needs a push: Windows/macOS and
+      publish are unverified until the first run on GitHub.)*

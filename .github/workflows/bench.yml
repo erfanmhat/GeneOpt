@@ -1,0 +1,42 @@
+name: Benchmark
+
+# Opt-in: the full run takes ~20 min. Trigger manually, or label a PR "perf".
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: Seeds per optimiser and problem
+        default: "30"
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # to post the results table
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . -r tests/bench/requirements.txt
+      - name: Run benchmark
+        env:
+          SEEDS: ${{ inputs.seeds || '30' }}
+        # the exit code carries the spec 003 gate; report first, fail after posting
+        run: python tests/bench/run.py --seeds "$SEEDS" --out bench.md || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
+      - run: cat bench.md >> "$GITHUB_STEP_SUMMARY"
+      - if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file bench.md
+      - if: env.GATE_FAILED == '1'
+        run: |
+          echo "::error::GeneOpt did not beat random search on every problem (spec 003 gate)"
+          exit 1

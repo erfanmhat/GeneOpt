@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +15,8 @@ def test_version():
 
 
 def run_python(code: str, cwd) -> None:
-    env = {"PYTHONPATH": str(Path(geneopt.__file__).parent.parent)}
+    # keep the rest of the environment: Windows Python cannot start without SYSTEMROOT
+    env = {**os.environ, "PYTHONPATH": str(Path(geneopt.__file__).parent.parent)}
     subprocess.run([sys.executable, "-c", code], cwd=cwd, env=env, check=True)
 
 

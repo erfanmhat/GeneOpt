@@ -48,10 +48,10 @@ Make the 2.0 test suite meet spec 007:
 
 ### Phase 3: Benchmarks & CI
 - [x] Task 5: Benchmark harness (`tests/bench/`) vs 5 libraries + random search, results recorded
-- [ ] Task 6: `.github/workflows/ci.yml` (lint, test matrix, test-plots, build, publish, bench)
+- [x] Task 6: `.github/workflows/ci.yml` (lint, test matrix, test-plots, build, publish, bench)
 
 ### Checkpoint C (complete)
-- [ ] Workflow passes actionlint. Linux matrix (3.10 / 3.12 / 3.13) reproduced locally with uv
+- [x] Workflow passes actionlint. Linux matrix (3.10 / 3.12 / 3.13) reproduced locally with uv
 
 ## Risks and mitigations
 

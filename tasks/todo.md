@@ -67,13 +67,13 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 6: CI workflow
 **Description:** `.github/workflows/ci.yml` with jobs lint, test (3.10–3.13 × ubuntu/windows/macos, core only), test-plots (+ coverage gate), build (+twine check), publish (tag `v*`, trusted publishing, `id-token: write`, environment `pypi`), and bench (`workflow_dispatch` + PRs labelled `perf`, installing `tests/bench/requirements.txt` and posting the table as a PR comment).
 **Acceptance criteria:**
-- [ ] actionlint reports no errors
-- [ ] Every command in the workflow was run locally on Linux. The test job passes on Python 3.10, 3.12 and 3.13 (uv venvs)
-- [ ] Publish runs only on `v*` tags, after the other jobs, with least-privilege permissions
+- [x] actionlint reports no errors
+- [x] Every command in the workflow was run locally on Linux. The test job passes on Python 3.10, 3.12 and 3.13 (uv venvs)
+- [x] Publish runs only on `v*` tags, after the other jobs, with least-privilege permissions
 **Verification:** actionlint + local commands
 **Dependencies:** 4, 5
 **Files:** `.github/workflows/ci.yml`, `specs/007-tests-and-ci.md` (criteria wording per the approval decisions)
 **Scope:** S
 
 ## Checkpoint C
-- [ ] All spec 007 criteria met or explicitly re-scoped
+- [x] All spec 007 criteria met or explicitly re-scoped (GitHub run pending a push)
