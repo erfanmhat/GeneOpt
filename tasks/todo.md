@@ -43,15 +43,15 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 4: Coverage bar
 **Description:** Measure line coverage of `geneopt/cache.py` and `geneopt/core.py` from the core suite. Add tests for any uncovered branches that matter. Enforce the bar with `coverage report --include=geneopt/cache.py,geneopt/core.py --fail-under=90`.
 **Acceptance criteria:**
-- [ ] ≥ 90% line coverage on each of the two files
-- [ ] The enforcement command exits non-zero when the bar is broken (checked once by lowering coverage locally, not committed)
+- [x] ≥ 90% line coverage on each of the two files
+- [x] The enforcement command exits non-zero when the bar is broken (checked once by lowering coverage locally, not committed)
 **Verification:** scratch venv `pytest --cov`
 **Dependencies:** 3
 **Files:** `tests/*.py`, `pyproject.toml`
 **Scope:** S
 
 ## Checkpoint B
-- [ ] All ledger IDs tested. Coverage bar met
+- [x] All ledger IDs tested. Coverage bar met
 
 ## Task 5: Competitor benchmark
 **Description:** `tests/bench/run.py` covers the three problems from 003 (Holder 2-D 4096² / 2,000 unique evals; Rastrigin 10-D × 256 / 5,000; categorical 6 × 5 labels / 500, hit rate). It runs seven optimisers: GeneOpt, random search, PyGAD, DEAP, pymoo GA, Optuna TPE and Nevergrad NGOpt, each as a small adapter. A shared memoising budget wrapper stops each run after N unique evaluations (with a 50 × N total-call cap). Seeds 0…N-1. Pins go in `tests/bench/requirements.txt`. Output is a Markdown table per problem (median, IQR or hit rate, unique evals, wall time). Crashes show as `crashed: …`.

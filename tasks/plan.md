@@ -41,10 +41,10 @@ Make the 2.0 test suite meet spec 007:
 
 ### Phase 2: Coverage of the ledger
 - [x] Task 3: Ledger meta-test + a named test for every bug ID + hypothesis property tests
-- [ ] Task 4: Coverage ≥ 90% on `cache.py` and `core.py`, enforced
+- [x] Task 4: Coverage ≥ 90% on `cache.py` and `core.py`, enforced
 
 ### Checkpoint B
-- [ ] All 29 ledger IDs have tests. Coverage bar met
+- [x] All 29 ledger IDs have tests. Coverage bar met
 
 ### Phase 3: Benchmarks & CI
 - [ ] Task 5: Benchmark harness (`tests/bench/`) vs 5 libraries + random search, results recorded
