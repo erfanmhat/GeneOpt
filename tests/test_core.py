@@ -60,7 +60,7 @@ def test_initial_population_size_applies_to_generation_zero_only():
 
 
 @pytest.mark.parametrize("seed", range(5))
-def test_elitism_keeps_best_of_population_monotonic(seed):
+def test_E_5_elitism_keeps_best_of_population_monotonic(seed):
     ga = GeneticAlgorithm(
         lambda x, y: -abs(x - 37) - abs(y - 3),
         {"x": list(range(100)), "y": list(range(10))},
@@ -177,7 +177,7 @@ def test_1x_cache_files_are_never_opened(tmp_path, monkeypatch):
     assert not [f for f in opened if f.endswith((".csv", ".json"))]
 
 
-def test_categorical_disk_cache_reloads_with_hits(tmp_path):
+def test_GC_6_categorical_disk_cache_reloads_with_hits(tmp_path):
     env = {"act": ["relu", "tanh", "gelu"], "lr": [1e-3, 1e-2]}
 
     def score(act, lr):
@@ -188,7 +188,7 @@ def test_categorical_disk_cache_reloads_with_hits(tmp_path):
     assert r.n_evaluations == 0 and r.params == {"act": "gelu", "lr": 1e-2}
 
 
-def test_objective_receives_a_fresh_dict_each_call():
+def test_GC_4_objective_dict_is_not_mutated_after_the_call():
     seen = []
     GeneticAlgorithm(
         lambda **p: seen.append(p) or 0.0, {"x": [1, 2]}, generations=2, population_size=4
@@ -199,7 +199,7 @@ def test_objective_receives_a_fresh_dict_each_call():
 # --- operators ---------------------------------------------------------------
 
 
-def test_mutation_rate_is_per_gene_probability():
+def test_E_2_mutation_rate_is_a_single_per_gene_probability():
     rng = np.random.default_rng(0)
     pop = np.zeros((10_000, 5), dtype=int)
     out = _mutate(pop.copy(), 0.2, np.array([10] * 5), np.array([False] * 5), rng)
@@ -214,23 +214,83 @@ def test_mutation_creeps_locally_for_ordered_numeric_params():
     assert (step > 0).all() and np.median(step) < 150
 
 
-def test_tournament_larger_than_population_is_fine(caplog):
+def test_E_4_tournament_larger_than_population_is_silent(caplog):
     rng = np.random.default_rng(0)
     winners = _tournament(np.array([1.0, 5.0, 3.0]), k=10, m=50, rng=rng)
     assert winners.shape == (50,) and set(winners) <= {0, 1, 2}
     assert caplog.records == []
 
 
-def test_tournament_draws_exactly_k_distinct_candidates():
+def test_E_4_tournament_draws_exactly_k_distinct_candidates():
     rng = np.random.default_rng(0)
     scores = np.arange(100.0)
     winners = _tournament(scores, k=100, m=20, rng=rng)  # k == pop: every candidate seen
     assert (winners == 99).all()
 
 
-def test_diversity_bounds():
+def test_H_2_diversity_is_normalised_gene_disagreement():
     assert diversity(np.zeros((10, 3), dtype=int)) == 0.0
     rng = np.random.default_rng(0)
     d = diversity(rng.integers(0, 8, size=(200, 4)))
     assert 0.4 < d <= 1.0
     assert diversity(np.array([[0, 1]])) == 0.0
+
+
+# --- ledger regressions ------------------------------------------------------
+
+
+def total(**params):
+    return float(sum(params.values()))
+
+
+def test_GC_2_dropping_a_parameter_gets_a_fresh_cache(tmp_path):
+    # 1.x matched an old {x1, x2, x3} row on the remaining {x1, x2} columns and returned its score
+    three = {"x1": [1, 2], "x2": [3, 4], "x3": [5, 6]}
+    GeneticAlgorithm(total, three, cache_dir=tmp_path, generations=2, population_size=4).start()
+    r = GeneticAlgorithm(
+        total, {"x1": [1, 2], "x2": [3, 4]}, cache_dir=tmp_path, generations=2, population_size=4
+    ).start()
+    assert r.n_evaluations > 0 and r.score <= 6
+    assert len(list(tmp_path.glob("*.jsonl"))) == 2
+
+
+def test_GC_5_parameters_named_score_and_generation(tmp_path):
+    # 1.x overwrote these parameters with its own bookkeeping columns, so they never hit the cache
+    def objective(score, generation):
+        return score - generation
+
+    env = {"score": [1, 2, 3], "generation": [0, 1]}
+    GeneticAlgorithm(objective, env, cache_dir=tmp_path, generations=4, population_size=6).start()
+    r = GeneticAlgorithm(objective, env, cache_dir=tmp_path, generations=4, population_size=6).start()
+    assert r.n_evaluations == 0
+    assert r.params == {"score": 3, "generation": 0} and r.score == 3
+
+
+def test_GC_8_integer_numpy_environment_persists(tmp_path):
+    # 1.x crashed in on_end: "Object of type int64 is not JSON serializable"
+    env = {"n": np.arange(8)}
+    GeneticAlgorithm(lambda n: n * 1, env, cache_dir=tmp_path, generations=3, population_size=4).start()
+    r = GeneticAlgorithm(lambda n: n * 1, env, cache_dir=tmp_path, generations=3, population_size=4).start()
+    assert r.n_evaluations == 0 and type(r.params["n"]) is int
+
+
+def test_GC_11_only_cache_dir_is_created(tmp_path, monkeypatch):
+    # 1.x always created ./cache, wherever the cache was really kept
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    store = tmp_path / "store" / "deep"
+    GeneticAlgorithm(total, {"x": [1, 2]}, cache_dir=store, generations=2, population_size=4).start()
+    assert list(cwd.iterdir()) == []
+    assert len(list(store.glob("*.jsonl"))) == 1
+
+
+def test_E_3_adaptive_rate_rises_as_diversity_falls():
+    # 1.x divided by the raw Hamming distance: more diversity -> less mutation, and rates above 1
+    from geneopt.core import _mutation_rate
+
+    rates = [_mutation_rate(0.05, d, adaptive=True) for d in np.linspace(0, 1, 11)]
+    assert rates == sorted(rates, reverse=True)
+    assert rates[0] == pytest.approx(0.5) and rates[-1] == pytest.approx(0.05)
+    assert _mutation_rate(0.8, 0.0, adaptive=True) == pytest.approx(0.8)  # ceiling never below base
+    assert _mutation_rate(0.05, 0.0, adaptive=False) == 0.05

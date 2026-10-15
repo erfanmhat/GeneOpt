@@ -174,3 +174,36 @@ def test_huge_search_space_summary_does_not_overflow(caplog):
     with caplog.at_level(logging.INFO, logger="geneopt"):
         GeneticAlgorithm(lambda **p: 0.0, env, population_size=2, generations=1).start()
     assert "1" + "0" * 400 in caplog.records[-1].getMessage()
+
+
+@pytest.mark.parametrize("threads", [None, 4])
+def test_A_1_result_types_are_identical_in_every_mode(threads):
+    # 1.x returned str(params) from the concurrent path and a dict from the sequential one
+    pool = ThreadPoolExecutor(threads) if threads else None
+    try:
+        _, result = run(executor=pool)
+    finally:
+        if pool:
+            pool.shutdown()
+    assert type(result.params) is dict and all(type(v) is int for v in result.params.values())
+    assert type(result.score) is float
+
+
+def test_A_2_counters_are_exact_under_concurrency():
+    # 1.x read and incremented its run counter in two separate locked sections
+    import threading
+    import time
+
+    lock, calls = threading.Lock(), [0]
+
+    def slow(x, y):
+        time.sleep(0.001)
+        with lock:
+            calls[0] += 1
+        return peak(x, y)
+
+    with ThreadPoolExecutor(8) as pool:
+        ga = GeneticAlgorithm(slow, ENV, population_size=16, generations=8, executor=pool)
+        result = ga.start()
+    assert result.n_evaluations == calls[0]
+    assert result.n_cache_hits == sum(int(h.sum()) for h in ga.history.hits)

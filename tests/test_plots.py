@@ -25,7 +25,7 @@ def test_diversity_is_exported_from_plots():
     assert diversity(np.zeros((5, 2), dtype=int)) == 0.0
 
 
-def test_gene_frequency_rows_sum_to_one():
+def test_H_3_gene_frequency_rows_sum_to_one():
     ga = run()
     matrix = gene_frequency_matrix(ga.history, "act")
     assert matrix.shape == (len(ga.history), 3)
@@ -109,3 +109,14 @@ def test_plot_writes_no_stray_files(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     run().plot(output_dir=tmp_path / "out", dpi=30)
     assert sorted(p.name for p in tmp_path.iterdir()) == ["out"]  # e.g. no catboost_info/
+
+
+def test_H_5_one_failing_plot_does_not_stop_the_others(tmp_path, monkeypatch):
+    # 1.x re-raised before logging, so the first failing plot aborted all the rest
+    def broken(genomes):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("geneopt.plots.diversity", broken)
+    out = run().plot(output_dir=tmp_path, dpi=30)
+    assert isinstance(out["diversity"], RuntimeError)
+    assert out["best_score"].exists() and out["cache_hit_rate"].exists() and out["hist_x"].exists()

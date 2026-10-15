@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -12,14 +13,30 @@ def test_version():
     assert geneopt.__version__ == "2.0.0"
 
 
-def test_import_has_no_side_effects(tmp_path):
-    code = (
+def run_python(code: str, cwd) -> None:
+    env = {"PYTHONPATH": str(Path(geneopt.__file__).parent.parent)}
+    subprocess.run([sys.executable, "-c", code], cwd=cwd, env=env, check=True)
+
+
+def test_A_4_import_pulls_in_no_optional_dependency(tmp_path):
+    # 1.x imported catboost (and sklearn, seaborn, pandas, matplotlib) at module level
+    run_python(
         "import sys, geneopt\n"
         "heavy = {'matplotlib', 'pandas', 'seaborn', 'catboost', 'sklearn'} & set(sys.modules)\n"
-        "assert not heavy, heavy\n"
+        "assert not heavy, heavy\n",
+        tmp_path,
     )
-    env = {"PYTHONPATH": str(__import__("pathlib").Path(geneopt.__file__).parent.parent)}
-    subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env, check=True)
+
+
+def test_A_3_import_and_run_write_no_files_without_cache_dir(tmp_path):
+    # 1.x created ./cache/<timestamp>.log at import time and appended to it on every log call
+    run_python(
+        "import logging\n"
+        "logging.basicConfig(level=logging.DEBUG)\n"
+        "from geneopt import GeneticAlgorithm\n"
+        "GeneticAlgorithm(lambda x: x, {'x': [1, 2, 3]}, generations=3, population_size=4).start()\n",
+        tmp_path,
+    )
     assert list(tmp_path.iterdir()) == []
 
 

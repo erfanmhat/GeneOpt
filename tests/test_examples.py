@@ -165,3 +165,11 @@ def test_quickstart_runs(tmp_path, monkeypatch):
 def test_categorical_runs():
     result = categorical.main(generations=20, population_size=20)
     assert set(result.params) == {"activation", "batch_size", "layers", "learning_rate", "optimizer"}
+
+
+def test_X_3_server_runner_is_named_as_documented():
+    # the 1.x README said RunNServer.py; the file was RunNServers.py
+    runner = EXAMPLES / "distributed_http" / "run_servers.py"
+    assert runner.exists()
+    assert "python run_servers.py" in (ROOT / "README.md").read_text()
+    assert not list(ROOT.rglob("RunNServer*.py"))

@@ -32,9 +32,9 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 3: Ledger coverage + property tests
 **Description:** `tests/test_ledger.py` parses the ledger IDs from `specs/README.md` and requires a `test_<ID>_*` for each one (ID with `-` → `_`). Rename existing tests that already cover an ID, and add missing ones (GC-2, 4, 5, 6, 8, 11, H-2, 3, 5, E-2, 3, 4, 5, A-1, 2, 3, 4, X-3). Hypothesis tests: best-so-far monotonic over seeds, cache round-trip of arbitrary JSON-able values, uniform initial sampling for sizes 2..300 (chi-square).
 **Acceptance criteria:**
-- [ ] `test_ledger.py` passes, and fails if a ledger row is added without a test (checked by a negative self-test)
-- [ ] Every new test asserts the 2.0 behaviour that contradicts the verified 1.x behaviour in the ledger
-- [ ] The property tests run within the default hypothesis budget, in under 10 s total
+- [x] `test_ledger.py` passes, and fails if a ledger row is added without a test (checked by a negative self-test)
+- [x] Every new test asserts the 2.0 behaviour that contradicts the verified 1.x behaviour in the ledger
+- [x] The property tests run within the default hypothesis budget, in under 10 s total
 **Verification:** `pytest -q`
 **Dependencies:** 1
 **Files:** `tests/test_ledger.py`, `tests/test_*.py`

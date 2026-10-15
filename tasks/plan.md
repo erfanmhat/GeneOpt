@@ -40,7 +40,7 @@ Make the 2.0 test suite meet spec 007:
 - [x] Core suite green in a numpy-only venv. `ruff check`, `ruff format --check`, `mypy geneopt` clean
 
 ### Phase 2: Coverage of the ledger
-- [ ] Task 3: Ledger meta-test + a named test for every bug ID + hypothesis property tests
+- [x] Task 3: Ledger meta-test + a named test for every bug ID + hypothesis property tests
 - [ ] Task 4: Coverage ≥ 90% on `cache.py` and `core.py`, enforced
 
 ### Checkpoint B

@@ -52,6 +52,15 @@ def diversity(genomes) -> float:
     return float(np.mean(disagree))
 
 
+def _mutation_rate(base: float, diversity_value: float, adaptive: bool) -> float:
+    """Per-gene mutation probability: ``base``, rising linearly to ``max(MAX_MUTATION_RATE, base)``
+    as the population converges (diversity 1 -> 0)."""
+    if not adaptive:
+        return base
+    ceiling = max(MAX_MUTATION_RATE, base)
+    return base + (ceiling - base) * (1 - diversity_value)
+
+
 def _tournament(signed_scores, k: int, m: int, rng) -> np.ndarray:
     """Indices of ``m`` tournament winners, each the best of exactly ``k`` candidates."""
     n = len(signed_scores)
@@ -247,10 +256,7 @@ class GeneticAlgorithm:
         return failed
 
     def _next_generation(self, population, signed, rng) -> np.ndarray:
-        rate = self._mutation_rate
-        if self._adaptive_mutation:
-            ceiling = max(MAX_MUTATION_RATE, rate)
-            rate += (ceiling - rate) * (1 - diversity(population))
+        rate = _mutation_rate(self._mutation_rate, diversity(population), self._adaptive_mutation)
 
         elites: list[np.ndarray] = []
         seen: set[tuple[int, ...]] = set()
