@@ -1,74 +1,34 @@
-# Implementation Plan: spec 007 — Tests, Benchmarks & CI
+# Implementation Plan: spec 012 — crossover mixing
 
-(The spec 011 / 2.0.0 plan is complete; see git history of this file.)
+(Earlier plans for specs 011 and 007 are complete; see git history of this file.)
 
 ## Overview
 
-Make the 2.0 test suite meet spec 007:
-- a core suite that runs with numpy only, plus a separate plots suite
-- lint and type checks
-- a named regression test for every bug ID in the ledger
-- property tests
-- a coverage bar on the code that can give wrong answers
-- a benchmark against other optimisation libraries (PyGAD, DEAP, pymoo, Optuna, Nevergrad) and
-  random search
-- a GitHub Actions workflow
+The 007 benchmark put GeneOpt 3rd on 10-D Rastrigin. The suspected cause is that crossover swaps
+each gene with p = 1/n_params, so two parents exchange about one gene per mating. Spec 012 says
+to **measure first, then change the default**.
 
 ## Architecture decisions
 
-- **Marker split.** Tests that need pandas/matplotlib/catboost get `@pytest.mark.plots`. The core
-  CI job runs `-m "not plots"` with only `.[dev]` installed. That's how "core, no plotting extras"
-  gets proven rather than assumed.
-- **Dev extra** gains `hypothesis`, `ruff`, `mypy`, `pytest-cov`. None of it is installed into the
-  user's conda env. Verification uses throwaway venvs in the scratchpad (uv, with its cache and
-  Python downloads kept in the scratchpad).
-- **The benchmark is library-agnostic** through a budget wrapper around the objective. It memoises
-  calls, records the best score among the first N *unique* calls, then raises a sentinel to stop
-  the run (with a 50 × N total-call cap). Every library gets the same metric and the same free
-  duplicates, and none of them needs a budget feature. Competitor pins live in
-  `tests/bench/requirements.txt` (spec 007 § Benchmarks).
-- **The ledger meta-test** parses the ID column of `specs/README.md` and fails if any ID has no
-  `test_<ID>_*` function. That makes criterion 1 self-enforcing.
+- Crossover moves into a pure function, `_crossover(p1, p2, swap_rate, crossover_rate, rng)`,
+  like `_mutate`, so its mixing rate can be tested directly.
+- New constructor parameter `crossover_swap_rate: float | None`. `None` means 1/n_params, which is
+  exactly today's behaviour, so Task 1 changes no runs.
+- The benchmark harness gets `--geneopt-swap-rate` so rates can be compared without editing code.
 
 ## Task list
 
-### Phase 1: Suite structure
-- [x] Task 1: `plots` marker; core suite passes with numpy + pytest only
-- [x] Task 2: ruff + mypy config, `py.typed`, findings fixed
+- [ ] Task 1: `crossover_swap_rate` parameter + `_crossover` extraction (no behaviour change)
+- [ ] Task 2: Benchmark 1/n vs 0.2 vs 0.5 on all three problems (30 seeds), results in spec 012
+- [ ] Task 3: Set the default to the winning rate (or revise spec 012 if the cause is elsewhere); update README, CHANGELOG, benchmark table
 
-### Checkpoint A
-- [x] Core suite green in a numpy-only venv. `ruff check`, `ruff format --check`, `mypy geneopt` clean
+### Checkpoint
+- [ ] Spec 012 acceptance criteria met. Full suite + lint green. CI green on PR #1
 
-### Phase 2: Coverage of the ledger
-- [x] Task 3: Ledger meta-test + a named test for every bug ID + hypothesis property tests
-- [x] Task 4: Coverage ≥ 90% on `cache.py` and `core.py`, enforced
+## Risks
 
-### Checkpoint B
-- [x] All 29 ledger IDs have tests. Coverage bar met
-
-### Phase 3: Benchmarks & CI
-- [x] Task 5: Benchmark harness (`tests/bench/`) vs 5 libraries + random search, results recorded
-- [x] Task 6: `.github/workflows/ci.yml` (lint, test matrix, test-plots, build, publish, bench)
-
-### Checkpoint C (complete)
-- [x] Workflow passes actionlint. Linux matrix (3.10 / 3.12 / 3.13) reproduced locally with uv
-
-## Risks and mitigations
-
-| Risk | Impact | Mitigation |
-|---|---|---|
-| GeneOpt doesn't beat random search (003 hard gate) | High | That's a real finding. **Stop and report** with the numbers instead of tuning to pass |
-| GeneOpt ranks low against TPE / NGOpt | Low | Expected on small budgets for model-based optimisers. Reported, not gated (003) |
-| A competitor's adapter is unfair (wrong encoding, starved population) | Med | Fairness rules in 007. Each adapter is ≤ 30 lines and uses library defaults. Versions pinned and printed |
-| Optuna TPE is slow at 5,000 trials × 30 seeds | Med | The harness takes `--seeds` and `--only`. The seed count actually run is reported with the results |
-| Windows/macOS CI can't be checked locally | Med | Only Linux is checked locally. Windows/macOS stay unverified until the workflow runs on GitHub |
-
-## Decisions (resolved)
-
-1. Benchmark against other libraries instead of 1.x (user). Specs 003 and 007 rewritten.
-2. 007 criterion "the suite fails on 1.0.10" replaced. It's impossible after the hard break, so
-   the 1.x side is covered by the inline reproductions (spec 007 § Principle).
-3. Test files keep their current names. Spec 007's list was updated to match.
-4. No push. CI is validated with actionlint and a local Linux matrix. The GitHub run is pending a
-   push. `origin` now points to the canonical `github.com/erfanmhat/GeneOpt` (GAPY was its old
-   name, and GitHub redirects it).
+| Risk | Mitigation |
+|---|---|
+| A higher swap rate helps Rastrigin but hurts Holder/categorical | Task 2 measures all three. Task 3 picks a default only if none regresses beyond the 30-seed IQR |
+| The cause is elsewhere (mutation, elitism) | Spec 012 step 1: revise the spec and stop. Don't tune blindly |
+| Changing the default changes every seeded run | 2.0.0 isn't published yet, so it ships inside 2.0.0 (spec 012 § Release impact) |
