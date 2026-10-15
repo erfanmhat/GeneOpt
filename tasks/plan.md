@@ -36,7 +36,7 @@ package is deleted only in the final task.
 - [x] `pytest` green, wheel builds
 
 ### Phase 2: Core
-- [ ] Task 3: `History` + `Result` types
+- [x] Task 3: `History` + `Result` types
 - [ ] Task 4: `GeneticAlgorithm` sequential run (integer genomes, operators, validation)
 - [ ] Task 5: Executor + `on_error` policy + logging
 

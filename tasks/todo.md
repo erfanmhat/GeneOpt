@@ -30,8 +30,8 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 3: History + Result
 **Description:** `geneopt/history.py`: `History` (per-generation genomes/scores/hits arrays, `append`, `to_frame(env)` with lazy pandas). `Result` frozen dataclass in `geneopt/core.py` (010), with Python-native values via `_to_python`.
 **Acceptance criteria:**
-- [ ] `History.to_frame` returns one row per individual per generation, with a `cache_hit` column
-- [ ] `json.dumps(dataclasses.asdict(Result(...)))` works for numpy values. `Result` isn't iterable
+- [x] `History.to_frame` returns one row per individual per generation, with a `cache_hit` column
+- [x] `json.dumps(dataclasses.asdict(Result(...)))` works for numpy values. `Result` isn't iterable
 **Verification:** `pytest tests/test_history.py tests/test_result.py`
 **Dependencies:** 1
 **Files:** `geneopt/history.py`, `geneopt/core.py`, tests
