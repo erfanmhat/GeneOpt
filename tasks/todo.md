@@ -22,11 +22,22 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 **Files:** `tests/bench/run.py`, `tests/test_bench.py`, `specs/012-crossover-mixing.md`
 **Scope:** S
 
-## Task 3: Choose the default
-**Description:** If one rate closes most of the Rastrigin gap without regressing Holder/categorical, make it the default. Otherwise revise spec 012 with the evidence and stop. Update README parameter table, CHANGELOG, spec 003 §1 and the 007 benchmark table.
+## Task 3 (replaced): standard operators
+**Decision (user, 2026-10-16):** replace mutation, selection and crossover with the most standard approach.
+**Description:** Crossover becomes uniform: each gene of a crossing pair swaps with p = 0.5, and pairs cross with `crossover_rate`. Mutation becomes random resetting: each gene, with p = `mutation_rate`, gets a uniformly chosen *other* value. `mutation_rate` defaults to `None` = 1/n_params. Selection stays as tournament (k = 3) + elitism (1), which is already standard. Remove `adaptive_mutation`, `crossover_swap_rate`, creep (`CREEP_SIGMA`, `_is_ordered_numeric`), `MAX_MUTATION_RATE` and `_mutation_rate`.
 **Acceptance criteria:**
-- [ ] Spec 012 acceptance criteria met, or the spec revised with evidence
-- [ ] Full suite, lint, CI green
-**Dependencies:** 2
-**Files:** `geneopt/core.py`, tests, `README.md`, `CHANGELOG.md`, `specs/003*`, `specs/007*`, `specs/012*`
+- [ ] `_crossover` swaps about 50% of the genes of crossing pairs, and none when `crossover_rate=0`
+- [ ] `_mutate` changes each gene with probability `mutation_rate` (±10%), always to a different value, never outside range
+- [ ] Default `mutation_rate` is 1/n_params. Removed parameters raise `TypeError`. Ledger tests E-2/E-3 updated to the new rule
+- [ ] Full suite, lint and mypy green. Gate (beats random search) still passes on a quick check
+**Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `tests/bench/run.py`, `tests/test_bench.py`
+**Scope:** M
+
+## Task 4: Benchmark and docs
+**Description:** Full 30-seed benchmark with all seven optimisers. Replace the results in spec 007, close spec 012 with the outcome, and update spec 003 (operators), spec 005 (signature), spec 011 (`adaptive_mutation` never shipped, so there's no 1.x mapping), the README parameter table and the CHANGELOG.
+**Acceptance criteria:**
+- [ ] Gate passes. **If not → stop and report**
+- [ ] Every Markdown file that mentions the old operators or removed parameters is updated (grep-checked)
+- [ ] Full suite, lint, CI green on PR #1
+**Dependencies:** 3
 **Scope:** M
