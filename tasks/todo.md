@@ -16,8 +16,8 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 2: Measure swap rates
 **Description:** Add `--geneopt-swap-rate` (repeatable) to `tests/bench/run.py`, so GeneOpt can run as several variants (`geneopt@1/n`, `geneopt@0.2`, `geneopt@0.5`). Run 30 seeds on all three problems and record the table in spec 012.
 **Acceptance criteria:**
-- [ ] Table for 1/n, 0.2 and 0.5 (30 seeds, all problems) recorded in spec 012
-- [ ] Variant parsing unit-tested in the core suite
+- [x] Table for 1/n, 0.2 and 0.5 (30 seeds, all problems) recorded in spec 012
+- [x] Variant parsing unit-tested in the core suite
 **Dependencies:** 1
 **Files:** `tests/bench/run.py`, `tests/test_bench.py`, `specs/012-crossover-mixing.md`
 **Scope:** S

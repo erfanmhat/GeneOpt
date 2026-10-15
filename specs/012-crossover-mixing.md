@@ -1,6 +1,6 @@
 # 012 — Crossover Mixes Too Little on Many-Parameter Problems
 
-**Status:** proposed · **Severity:** 🟠 high (search quality) · **Found by:** the 007 benchmark ·
+**Status:** step 1 measured, cause partly elsewhere (see Measurement) · **Severity:** 🟠 high (search quality) · **Found by:** the 007 benchmark ·
 **Depends on:** 003
 
 ## Problem
@@ -44,6 +44,35 @@ This is a hypothesis. Step 1 below checks it before anything changes.
    constructor, validated in `[0, 1]`. Default to whichever rate wins the benchmark without
    losing Holder or categorical.
 3. **The 1/n behaviour stays reachable** as `crossover_swap_rate=1/n_params`. It isn't the default.
+
+## Measurement (step 1, 2026-10-16)
+
+30 seeds per cell, same harness, budgets and seeds as the 007 benchmark
+(`python tests/bench/run.py --only geneopt,random --geneopt-swap-rate 1/n --geneopt-swap-rate 0.2
+--geneopt-swap-rate 0.5`):
+
+| swap rate | Rastrigin median [IQR] | Holder median | categorical hit rate |
+|---|---|---|---|
+| 1/n (current default) | 6.28 [5.42, 7.59] | −19.2085 | 100% |
+| 0.2 | 5.54 [4.76, 6.47] | −19.2085 | 100% |
+| **0.5** | **4.90 [3.36, 5.93]** | −19.2085 | 100% |
+| *for reference: DEAP / pymoo (007)* | *0.64 / 0* | | |
+
+**Finding: crossover is a minor factor, not the main cause.**
+- A 0.5 swap rate improves Rastrigin by about 22% and costs nothing on Holder or categorical.
+- It closes only about a quarter of the gap to DEAP (6.28 → 4.90, against 0.64).
+- Under step 1 the main cause is elsewhere. The default is **not** changed until it's found.
+
+### Next hypotheses (for a revised step 2)
+
+| Hypothesis | Why it fits | Experiment |
+|---|---|---|
+| Creep step too coarse | `CREEP_SIGMA = 0.1` × 256 values ≈ 26 index steps ≈ 1.0 in x. That's the spacing between Rastrigin's local minima, so creep keeps jumping between basins instead of refining within one. A median of ~5 is consistent with ~5 dimensions stuck one basin away | `CREEP_SIGMA` ∈ {0.1, 0.03, 0.01}, or a mix of large and small steps |
+| Adaptive mutation too disruptive near convergence | the rate rises to 0.5 per gene as diversity falls, scrambling good individuals | `adaptive_mutation=False` at 0.05 and 0.1 |
+| Selection pressure / elitism | 1 elite out of 50 with tournament 3 | `elitism` ∈ {1, 5}, `tournament_size` ∈ {3, 5} |
+
+Each experiment is a harness variant, measured exactly like the table above. A default changes only
+on evidence that holds across all three problems.
 
 ## Release impact
 
