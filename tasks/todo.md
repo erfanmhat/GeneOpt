@@ -1,13 +1,13 @@
 # GeneOpt 2.0.0 — Task List
 
-Tests: `python -m pytest -q` · Build: `python -m build` (+ `twine check dist/*` at the end)
+Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the `build` tool isn't installed. pip builds in isolation)
 
 ## Task 1: Packaging skeleton + repo hygiene
 **Description:** Add a PEP 621 `pyproject.toml` (hatchling, numpy-only core, `[plots]`/`[analysis]`/`[dev]` extras, Python ≥ 3.10), a `geneopt/__init__.py` with `__version__ = "2.0.0"`, and `tests/`. Delete `setup.py`, `build/`, `dist/`, `GeneOpt.egg-info/` and all tracked `__pycache__/` from git. Extend `.gitignore`.
 **Acceptance criteria:**
-- [ ] `git ls-files | grep -E '(^build/|^dist/|egg-info|__pycache__|\.pyc$|^setup\.py$)'` is empty
-- [ ] `import geneopt; geneopt.__version__ == "2.0.0"`, and importing it creates no files and doesn't import matplotlib/pandas
-- [ ] `python -m build` produces a wheel that contains `geneopt/`
+- [x] `git ls-files | grep -E '(^build/|^dist/|egg-info|__pycache__|\.pyc$|^setup\.py$)'` is empty
+- [x] `import geneopt; geneopt.__version__ == "2.0.0"`, and importing it creates no files and doesn't import matplotlib/pandas
+- [x] `python -m build` produces a wheel that contains `geneopt/`
 **Verification:** `pytest tests/test_api.py` · `python -m build`
 **Dependencies:** None
 **Files:** `pyproject.toml`, `.gitignore`, `geneopt/__init__.py`, `tests/test_api.py`, deletions

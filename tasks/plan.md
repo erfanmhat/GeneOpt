@@ -29,7 +29,7 @@ package is deleted only in the final task.
 ## Task list
 
 ### Phase 1: Foundation
-- [ ] Task 1: Packaging skeleton + repo hygiene
+- [x] Task 1: Packaging skeleton + repo hygiene
 - [ ] Task 2: `GenomeCache` (exact keys, fingerprint, JSONL)
 
 ### Checkpoint A

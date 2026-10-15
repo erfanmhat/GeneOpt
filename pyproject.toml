@@ -1,3 +1,39 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "GeneOpt"
+dynamic = ["version"]
+description = "Genetic-algorithm optimisation over discrete search spaces, with caching and plots"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Erfan Mahdavi Athar", email = "erfan.mh.at@gmail.com" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.7", "seaborn>=0.12", "pandas>=2.0"]
+analysis = ["GeneOpt[plots]", "catboost>=1.2"]
+dev = ["pytest>=8"]
+
+[project.urls]
+Source = "https://github.com/erfanmhat/GeneOpt"
+
+[tool.hatch.version]
+path = "geneopt/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["geneopt"]
+
+[tool.hatch.build.targets.sdist]
+include = ["geneopt", "tests", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
