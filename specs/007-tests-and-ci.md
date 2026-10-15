@@ -98,7 +98,7 @@ extra, because users installing `GeneOpt` should never get pinned competitor lib
 CI runs the full benchmark on `workflow_dispatch` and on PRs labelled `perf`, and posts the table
 as a PR comment.
 
-### Benchmark results (2026-10-16, local run, Linux, 8 jobs)
+### Benchmark results (2026-10-16, standard operators, local run, Linux, 8 jobs)
 
 Seeds: 30 · budget scale: 1 · Python 3.12.14 · GeneOpt 2.0.0, pygad 3.8.1, deap 1.4.4, pymoo 0.6.2, optuna 5.0.0, nevergrad 1.0.12
 
@@ -106,55 +106,56 @@ Seeds: 30 · budget scale: 1 · Python 3.12.14 · GeneOpt 2.0.0, pygad 3.8.1, de
 
 | optimiser | median best [IQR] (lower is better) | unique evals | seconds |
 |---|---|---|---|
-| geneopt | -19.2085 [-19.21, -19.21] | 2000 | 0.20 |
-| pymoo | -19.2085 [-19.21, -19.21] | 2000 | 0.34 |
-| deap | -19.208 [-19.21, -19.21] | 2000 | 1.79 |
-| optuna | -19.2071 [-19.21, -19.21] | 2000 | 111.27 |
-| pygad | -19.1888 [-19.2, -19.16] | 2000 | 2.25 |
-| nevergrad | -19.1313 [-19.18, -18.99] | 2000 | 3.63 |
-| random | -19.1087 [-19.15, -19.03] | 2000 | 0.02 |
+| pymoo | -19.2085 [-19.21, -19.21] | 2000 | 0.25 |
+| deap | -19.208 [-19.21, -19.21] | 2000 | 0.89 |
+| optuna | -19.2071 [-19.21, -19.21] | 2000 | 72.44 |
+| geneopt | -19.2036 [-19.21, -19.19] | 2000 | 0.04 |
+| pygad | -19.1888 [-19.2, -19.16] | 2000 | 1.17 |
+| nevergrad | -19.1313 [-19.18, -18.99] | 2000 | 2.53 |
+| random | -19.1087 [-19.15, -19.03] | 2000 | 0.01 |
 
 #### rastrigin (10-D, sizes 256, budget 5000 unique evals)
 
 | optimiser | median best [IQR] (lower is better) | unique evals | seconds |
 |---|---|---|---|
-| pymoo | 0 [0, 0] | 5000 | 0.78 |
-| deap | 0.636473 [0.6365, 0.9547] | 5000 | 1.25 |
-| geneopt | 6.2834 [5.42, 7.593] | 5000 | 0.31 |
-| nevergrad | 6.65427 [5.677, 8.43] | 5000 | 27.89 |
-| pygad | 11.716 [9.09, 13.58] | 5000 | 0.59 |
-| optuna | 39.1921 [31.81, 40.99] | 5000 | 279.80 |
-| random | 89.7588 [82.56, 98.67] | 5000 | 0.11 |
+| pymoo | 0 [0, 0] | 5000 | 0.51 |
+| deap | 0.636473 [0.6365, 0.9547] | 5000 | 0.83 |
+| geneopt | 3.5935 [2.907, 4.331] | 5000 | 0.16 |
+| nevergrad | 6.65427 [5.677, 8.43] | 5000 | 30.73 |
+| pygad | 11.716 [9.09, 13.58] | 5000 | 0.34 |
+| optuna | 39.1921 [31.81, 40.99] | 5000 | 225.49 |
+| random | 89.7588 [82.56, 98.67] | 5000 | 0.08 |
 
 #### categorical (6-D, sizes 5, budget 500 unique evals)
 
 | optimiser | hit rate | unique evals | seconds |
 |---|---|---|---|
-| geneopt | 100% (median best -6) | 500 | 0.04 |
-| deap | 100% (median best -6) | 270 | 0.80 |
-| pymoo | 100% (median best -6) | 500 | 0.25 |
-| optuna | 100% (median best -6) | 500 | 1.70 |
-| pygad | 97% (median best -6) | 500 | 0.03 |
-| nevergrad | 70% (median best -6) | 448 | 120.49 |
-| random | 3% (median best -5) | 500 | 0.01 |
+| geneopt | 100% (median best -6) | 500 | 0.01 |
+| deap | 100% (median best -6) | 270 | 0.41 |
+| pymoo | 100% (median best -6) | 500 | 0.26 |
+| optuna | 100% (median best -6) | 500 | 1.68 |
+| pygad | 97% (median best -6) | 500 | 0.02 |
+| nevergrad | 70% (median best -6) | 448 | 129.33 |
+| random | 3% (median best -5) | 500 | 0.00 |
 
 **Gate (beats random search everywhere):** PASS
 
 **Reading the results:**
 - **Gate passes.** GeneOpt beats random search on all three problems.
-- **Holder:** GeneOpt ties pymoo for 1st. Every run in the IQR reaches the grid optimum (−19.2085).
+- **GeneOpt uses the standard operators** (003): uniform crossover and random-resetting
+  mutation at 1/n_params, with tournament selection and elitism. The other six rows are identical
+  to the first run (same seeds and versions), so the comparison is like-for-like.
 - **Categorical:** GeneOpt ties for 1st with DEAP, pymoo and Optuna, at a 100% hit rate.
-- **Rastrigin: GeneOpt is 3rd** (median 6.28), behind pymoo (0, solved in every run) and DEAP
-  (0.64). The IQRs don't overlap, so this is a real gap, not noise.
-  - Likely cause: crossover swaps each gene with p = 1/n_params, so two parents exchange about one
-    gene per mating. pymoo's SBX and DEAP's two-point crossover mix far more on a separable
-    10-D problem.
-  - **Follow-up**, not tuned here: try uniform crossover (p = 0.5), or make the swap rate a
-    parameter, then re-run this benchmark.
-- **Wall time:** GeneOpt is the fastest library on every problem (0.04–0.31 s per run). Optuna's
-  TPE costs 112–280 s per run at these budgets.
+- **Rastrigin: 3rd** (median 3.59), behind pymoo (0) and DEAP (0.64). That's 43% better than the
+  first 2.0 build's custom operators (6.28, spec 012).
+- **Holder: 4th** (median −19.2036, against −19.2085 for pymoo). The first build placed 1st
+  here. Random resetting has no small local steps, so it fine-tunes less on a fine 4096-point grid.
+- **Wall time:** GeneOpt is the fastest library on every problem (0.01–0.16 s per run).
 - DEAP stops at about 270 unique evaluations on the categorical problem. It converges and only
   re-proposes known points until the 50 × N call cap ends the run.
+
+**First 2.0 build (custom operators), for comparison:** Holder −19.2085 (1st, tied), Rastrigin
+6.28 (3rd), categorical 100% (1st, tied). The swap-rate measurements are in spec 012.
 
 ## CI (`.github/workflows/ci.yml`)
 

@@ -43,8 +43,6 @@ def main(generations=100, population_size=100):
         maximize=False,
         population_size=population_size,
         generations=generations,
-        crossover_rate=0.63,
-        mutation_rate=0.06,
         tournament_size=4,
         cache_dir="./cache",
         seed=42,
@@ -78,8 +76,9 @@ evaluated points.
 
 ## Categorical and mixed spaces
 
-Values can be anything: strings, ints, floats, objects. Ordered numeric parameters mutate by
-small steps to neighbouring values; everything else mutates to a uniformly chosen other value.
+Values can be anything: strings, ints, floats, objects. GeneOpt uses the standard operators for
+this kind of search: tournament selection with elitism, uniform crossover, and random-resetting
+mutation, where a mutated parameter takes a uniformly chosen other value.
 
 ```python
 """Search a mixed categorical / numeric space, e.g. model hyperparameters."""
@@ -140,9 +139,8 @@ if __name__ == "__main__":
 | `population_size` | `100` | individuals per generation |
 | `initial_population_size` | `population_size` | size of generation 0 only |
 | `generations` | `100` | maximum number of generations |
-| `crossover_rate` | `0.9` | probability that a pair of parents exchanges genes |
-| `mutation_rate` | `0.05` | per-gene mutation probability |
-| `adaptive_mutation` | `True` | raise the rate (up to 0.5) as the population loses diversity |
+| `crossover_rate` | `0.9` | probability that a pair of parents performs uniform crossover (each gene swapped with p = 0.5) |
+| `mutation_rate` | `1/n_params` | per-gene probability of resetting to a random other value; the default gives one mutation per child on average |
 | `tournament_size` | `3` | candidates per tournament selection |
 | `elitism` | `1` | best distinct genomes copied unchanged into the next generation |
 | `early_stopping_rounds` | `None` | stop after this many generations without improvement |

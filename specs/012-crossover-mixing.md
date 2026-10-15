@@ -1,6 +1,6 @@
 # 012 — Crossover Mixes Too Little on Many-Parameter Problems
 
-**Status:** step 1 measured, cause partly elsewhere (see Measurement) · **Severity:** 🟠 high (search quality) · **Found by:** the 007 benchmark ·
+**Status:** resolved: standard operators adopted (see Resolution) · **Severity:** 🟠 high (search quality) · **Found by:** the 007 benchmark ·
 **Depends on:** 003
 
 ## Problem
@@ -74,6 +74,33 @@ This is a hypothesis. Step 1 below checks it before anything changes.
 Each experiment is a harness variant, measured exactly like the table above. A default changes only
 on evidence that holds across all three problems.
 
+## Resolution (2026-10-16)
+
+The owner decided to replace mutation, selection and crossover with the **most standard
+approach**, rather than tune the custom operators:
+
+| Operator | First 2.0 build | Now (003) |
+|---|---|---|
+| Selection | tournament (k = 3) + 1 elite | unchanged; already the standard form |
+| Crossover | each gene swapped with p = 1/n_params | **uniform crossover**, each gene swapped with p = 0.5 |
+| Mutation | creep for ordered numbers; adaptive rate up to 0.5 | **random resetting** at a fixed `mutation_rate`, default 1/n_params |
+
+Removed: `adaptive_mutation`, the creep step, and the short-lived `crossover_swap_rate` parameter.
+
+**Outcome** (30 seeds, full results in 007):
+
+| Problem | Custom operators | Standard operators | Leader |
+|---|---|---|---|
+| Rastrigin (10-D) | 6.28 (3rd) | **3.59** (3rd) | pymoo 0 |
+| Holder (2-D) | −19.2085 (1st, tied) | −19.2036 (4th) | pymoo −19.2085 |
+| Categorical | 100% (1st, tied) | 100% (1st, tied) | — |
+
+The standard operators recombine better, so Rastrigin improves by 43%. They fine-tune less,
+because random resetting has no small local steps, so Holder drops from 1st to 4th. The gap to
+pymoo/DEAP on Rastrigin remains. The likely next step is still the one in *Next hypotheses*:
+local refinement, for example an optional creep or a small-step mutation, measured the same way.
+That's for a later release.
+
 ## Release impact
 
 Changing the default changes search behaviour, so the same seed gives a different run:
@@ -82,8 +109,9 @@ Changing the default changes search behaviour, so the same seed gives a differen
 
 ## Acceptance criteria
 
-- [ ] Benchmark table for swap rates 1/n, 0.2 and 0.5 recorded here (30 seeds).
-- [ ] With the new default, Rastrigin median best is no worse than DEAP's (0.64) or the cause is
-      shown to be elsewhere and this spec revised.
-- [ ] Holder and categorical results don't get worse (median and hit rate within the 30-seed IQR).
-- [ ] Spec 003 gate still passes. All existing tests pass. A validation test covers the new parameter.
+- [x] Benchmark table for swap rates 1/n, 0.2 and 0.5 recorded here (30 seeds).
+- [x] The cause was shown to be mostly elsewhere (step 1), and the spec was revised. The owner
+      chose standard operators instead of further tuning (Resolution).
+- [x] Spec 003 gate still passes. All tests pass.
+- [ ] *Not met, accepted:* Rastrigin is not yet at DEAP's level (3.59 vs 0.64), and Holder
+      dropped from 1st to 4th. Tracked as the local-refinement follow-up.

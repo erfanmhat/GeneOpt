@@ -23,8 +23,6 @@ def main(generations=100, population_size=100):
         maximize=False,
         population_size=population_size,
         generations=generations,
-        crossover_rate=0.63,
-        mutation_rate=0.06,
         tournament_size=4,
         cache_dir="./cache",
         seed=42,

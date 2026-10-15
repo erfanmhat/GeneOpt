@@ -24,11 +24,11 @@ to **measure first, then change the default**.
   use the textbook operators instead of tuning the custom ones
 - [x] Task 3: Standard operators: uniform crossover (0.5), random-resetting mutation (default 1/n_params),
   tournament selection + elitism unchanged. `adaptive_mutation`, creep and `crossover_swap_rate` removed
-- [ ] Task 4: Benchmark the standard operators (30 seeds, all optimisers). Update specs 003/005/007/011/012,
+- [x] Task 4: Benchmark the standard operators (30 seeds, all optimisers). Update specs 003/005/007/011/012,
   README, CHANGELOG
 
 ### Checkpoint
-- [ ] Spec 012 acceptance criteria met. Full suite + lint green. CI green on PR #1
+- [x] Spec 012 resolved (standard operators; Holder 4th / Rastrigin 3rd accepted, follow-up tracked). Full suite + lint green
 
 ## Risks
 

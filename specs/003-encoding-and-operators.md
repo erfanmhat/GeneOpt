@@ -59,13 +59,19 @@ decode = lambda g: {k: env[k][i] for k, i in zip(keys, g)}
 init   = rng.integers(0, sizes, size=(pop, n_params))   # uniform, no bias (E-1 gone)
 ```
 
-- **Crossover** (unchanged semantics): for each gene, swap between children with
-  `p = 1 / n_params`, gated by `r_cross`. This is vectorised as a boolean mask.
-- **Mutation**, per gene with probability `mutation_rate` (one gate, which fixes E-2):
-  - *ordered numeric* parameters (detected: every value is a real number and the list is
-    monotonic): **creep**, `i ± round(N(0, σ·n))`, clipped, with `σ = 0.1` by default. This
-    gives small local steps, which is what the bit flips were trying to do.
-  - *anything else*: resample uniformly from the other `n-1` indices.
+- **Crossover: uniform crossover**, the textbook operator for gene vectors. A pair of parents
+  crosses with probability `crossover_rate`; a crossing pair exchanges each gene with p = 1/2.
+  It doesn't depend on parameter order, which matters because parameters are named, not
+  positioned. Vectorised as a boolean mask.
+- **Mutation: random resetting**, the textbook operator for integer and categorical genes. Each
+  gene, with probability `mutation_rate` (one gate, which fixes E-2), takes a uniformly chosen
+  *other* value. `mutation_rate` defaults to **1/n_params**, so each child gets one mutation on
+  average (the standard 1/L rule).
+
+> **History (spec 012):** the first 2.0 build used a 1/n_params swap rate, creep steps for
+> ordered numeric parameters and an adaptive mutation rate. The competitor benchmark found
+> GeneOpt 3rd on 10-D Rastrigin. The decision was to replace the custom operators with the
+> standard ones rather than tune them. Rastrigin improved from 6.28 to 3.59 (see 007).
 - The cache key (001) is `tuple(genome)` with no conversion.
 - `_init_environment_decode`, `_n_bits`, `_environment_param_n_bits` and the bit loops are
   deleted.
@@ -74,17 +80,12 @@ init   = rng.integers(0, sizes, size=(pop, n_params))   # uniform, no bias (E-1 
 > (`(n-1).bit_length()`, Gray code, `index % n`) still biases sizes that aren't powers of two,
 > so it isn't worth carrying.
 
-### 2. Adaptive mutation that adapts the right way
+### 2. A fixed mutation rate (E-3)
 
-```python
-d = normalised_diversity(pop)               # [0, 1], see 002
-ceiling = max(MAX_MUTATION_RATE, base)    # MAX_MUTATION_RATE = 0.5, a module constant
-rate = base + (ceiling - base) * (1 - d)   # low diversity → more mutation
-```
-
-- `adaptive_mutation: bool = True`. The ceiling is a constant, not a parameter. Nobody has asked
-  to tune it.
-- Clamped to `[base, ceiling]` by construction, so it can't exceed 1.
+1.x divided the rate by the raw Hamming distance, so more diversity meant less mutation and the
+rate could exceed 1. 2.0 uses the standard rule instead: a constant per-gene probability,
+validated in `[0, 1]`, with no dependence on diversity. Diversity is still plotted (002), but
+it doesn't drive the search.
 
 ### 3. Selection: one function, exact tournament
 
@@ -137,8 +138,10 @@ releases is investigated, but it doesn't block a release on its own. Model-based
 ## Acceptance criteria
 
 - [ ] 8,000 random initial genes over 5 values: each value 1,600 ± 150.
-- [ ] With `adaptive_mutation=False`, measured per-gene mutation frequency ≈ `mutation_rate` (±10%).
-- [ ] Adaptive rate stays within `[base, max(0.5, base)]` for any population.
+- [x] Measured per-gene mutation frequency ≈ `mutation_rate` (±10%). A mutated gene always takes a
+      different, in-range value.
+- [x] `mutation_rate` defaults to 1/n_params and doesn't change during a run.
+- [x] Uniform crossover swaps about 50% of the genes of crossing pairs, and none at `crossover_rate=0`.
 - [ ] Tournament with `k > pop` logs nothing and returns a valid index.
 - [ ] With `elitism ≥ 1`, best-of-population is monotonic across generations.
 - [ ] `early_stopping_rounds=3` stops exactly 3 generations after the last improvement.

@@ -38,8 +38,7 @@ GeneticAlgorithm(
     initial_population_size: int | None = None,      # None → population_size
     generations: int = 100,
     crossover_rate: float = 0.9,
-    mutation_rate: float = 0.05,
-    adaptive_mutation: bool = True,
+    mutation_rate: float | None = None,             # None → 1/n_params (003)
     tournament_size: int = 3,
     elitism: int = 1,
     early_stopping_rounds: int | None = None,

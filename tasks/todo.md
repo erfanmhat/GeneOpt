@@ -36,8 +36,8 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 4: Benchmark and docs
 **Description:** Full 30-seed benchmark with all seven optimisers. Replace the results in spec 007, close spec 012 with the outcome, and update spec 003 (operators), spec 005 (signature), spec 011 (`adaptive_mutation` never shipped, so there's no 1.x mapping), the README parameter table and the CHANGELOG.
 **Acceptance criteria:**
-- [ ] Gate passes. **If not → stop and report**
-- [ ] Every Markdown file that mentions the old operators or removed parameters is updated (grep-checked)
-- [ ] Full suite, lint, CI green on PR #1
+- [x] Gate passes. **If not → stop and report**
+- [x] Every Markdown file that mentions the old operators or removed parameters is updated (grep-checked)
+- [x] Full suite, lint, CI green on PR #1
 **Dependencies:** 3
 **Scope:** M
