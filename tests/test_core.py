@@ -200,18 +200,27 @@ def test_GC_4_objective_dict_is_not_mutated_after_the_call():
 
 
 def test_E_2_mutation_rate_is_a_single_per_gene_probability():
+    # 1.x gated twice (per parameter, then per bit), so 0.06 behaved like 0.0036
     rng = np.random.default_rng(0)
     pop = np.zeros((10_000, 5), dtype=int)
-    out = _mutate(pop.copy(), 0.2, np.array([10] * 5), np.array([False] * 5), rng)
+    out = _mutate(pop.copy(), 0.2, np.array([10] * 5), rng)
     assert 0.18 <= (out != pop).mean() <= 0.22
 
 
-def test_mutation_creeps_locally_for_ordered_numeric_params():
+def test_random_resetting_picks_a_different_value_in_range():
     rng = np.random.default_rng(0)
-    pop = np.full((10_000, 1), 500)
-    out = _mutate(pop.copy(), 1.0, np.array([1000]), np.array([True]), rng)
-    step = np.abs(out - pop)
-    assert (step > 0).all() and np.median(step) < 150
+    sizes = np.array([2, 3, 1000])
+    pop = np.column_stack([rng.integers(0, s, 5_000) for s in sizes])
+    out = _mutate(pop.copy(), 1.0, sizes, rng)
+    assert (out != pop).all() and (out >= 0).all() and (out < sizes).all()
+    counts = np.bincount(out[:, 2], minlength=1000)  # uniform over the other values, no creep
+    assert counts.max() < 25
+
+
+def test_parameters_with_one_value_never_mutate():
+    rng = np.random.default_rng(0)
+    out = _mutate(np.zeros((100, 1), dtype=int), 1.0, np.array([1]), rng)
+    assert (out == 0).all()
 
 
 def test_E_4_tournament_larger_than_population_is_silent(caplog):
@@ -285,49 +294,39 @@ def test_GC_11_only_cache_dir_is_created(tmp_path, monkeypatch):
     assert len(list(store.glob("*.jsonl"))) == 1
 
 
-def test_E_3_adaptive_rate_rises_as_diversity_falls():
-    # 1.x divided by the raw Hamming distance: more diversity -> less mutation, and rates above 1
-    from geneopt.core import _mutation_rate
-
-    rates = [_mutation_rate(0.05, d, adaptive=True) for d in np.linspace(0, 1, 11)]
-    assert rates == sorted(rates, reverse=True)
-    assert rates[0] == pytest.approx(0.5) and rates[-1] == pytest.approx(0.05)
-    assert _mutation_rate(0.8, 0.0, adaptive=True) == pytest.approx(0.8)  # ceiling never below base
-    assert _mutation_rate(0.05, 0.0, adaptive=False) == 0.05
+def test_E_3_mutation_rate_is_fixed_and_defaults_to_one_over_n():
+    # 1.x divided the rate by the raw Hamming distance (rates above 1 near convergence).
+    # 2.0 uses the textbook rule: a constant per-gene rate, 1/n_params unless set.
+    env = {f"p{i}": list(range(10)) for i in range(4)}
+    assert GeneticAlgorithm(total, env)._mutation_rate == pytest.approx(0.25)
+    assert GeneticAlgorithm(total, env, mutation_rate=0.1)._mutation_rate == 0.1
 
 
-# --- crossover (spec 012) ----------------------------------------------------
+# --- crossover: uniform (spec 012) ---------------------------------------------
 
 
-def test_crossover_swaps_genes_at_the_configured_rate():
+def test_uniform_crossover_swaps_half_the_genes_of_crossing_pairs():
     rng = np.random.default_rng(0)
     p1, p2 = np.zeros((5_000, 10), dtype=int), np.ones((5_000, 10), dtype=int)
-    for rate in (0.1, 0.5):
-        c1, c2 = _crossover(p1, p2, swap_rate=rate, crossover_rate=1.0, rng=rng)
-        assert abs(c1.mean() - rate) < 0.1 * rate  # c1 holds a 1 exactly where a gene was swapped
+    c1, c2 = _crossover(p1, p2, crossover_rate=1.0, rng=rng)
+    assert abs(c1.mean() - 0.5) < 0.02  # c1 holds a 1 exactly where a gene was swapped
 
 
 def test_crossover_rate_zero_never_swaps():
     rng = np.random.default_rng(0)
     p1, p2 = np.zeros((100, 4), dtype=int), np.ones((100, 4), dtype=int)
-    c1, c2 = _crossover(p1, p2, swap_rate=1.0, crossover_rate=0.0, rng=rng)
+    c1, c2 = _crossover(p1, p2, crossover_rate=0.0, rng=rng)
     assert (c1 == 0).all() and (c2 == 1).all()
 
 
 def test_crossover_children_hold_exactly_the_parents_genes():
     rng = np.random.default_rng(1)
     p1, p2 = rng.integers(0, 50, (200, 7)), rng.integers(0, 50, (200, 7))
-    c1, c2 = _crossover(p1, p2, swap_rate=0.5, crossover_rate=0.9, rng=rng)
+    c1, c2 = _crossover(p1, p2, crossover_rate=0.9, rng=rng)
     assert ((c1 == p1) | (c1 == p2)).all() and ((c1 + c2) == (p1 + p2)).all()
 
 
-def test_default_swap_rate_is_one_over_n_params():
-    env = {f"p{i}": list(range(30)) for i in range(5)}
-
-    def run(**kw):
-        ga = GeneticAlgorithm(total, env, population_size=12, generations=8, seed=3, **kw)
-        result = ga.start()
-        return result.params, result.score, [g.tobytes() for g in ga.history.genomes]
-
-    assert run() == run(crossover_swap_rate=1 / 5)
-    assert run() != run(crossover_swap_rate=0.5)
+@pytest.mark.parametrize("kwarg", ["adaptive_mutation", "crossover_swap_rate"])
+def test_non_standard_operator_options_are_gone(kwarg):
+    with pytest.raises(TypeError, match=kwarg):
+        GeneticAlgorithm(total, {"x": [1, 2]}, **{kwarg: 0.5})

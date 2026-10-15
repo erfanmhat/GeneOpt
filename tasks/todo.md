@@ -26,10 +26,10 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 **Decision (user, 2026-10-16):** replace mutation, selection and crossover with the most standard approach.
 **Description:** Crossover becomes uniform: each gene of a crossing pair swaps with p = 0.5, and pairs cross with `crossover_rate`. Mutation becomes random resetting: each gene, with p = `mutation_rate`, gets a uniformly chosen *other* value. `mutation_rate` defaults to `None` = 1/n_params. Selection stays as tournament (k = 3) + elitism (1), which is already standard. Remove `adaptive_mutation`, `crossover_swap_rate`, creep (`CREEP_SIGMA`, `_is_ordered_numeric`), `MAX_MUTATION_RATE` and `_mutation_rate`.
 **Acceptance criteria:**
-- [ ] `_crossover` swaps about 50% of the genes of crossing pairs, and none when `crossover_rate=0`
-- [ ] `_mutate` changes each gene with probability `mutation_rate` (±10%), always to a different value, never outside range
-- [ ] Default `mutation_rate` is 1/n_params. Removed parameters raise `TypeError`. Ledger tests E-2/E-3 updated to the new rule
-- [ ] Full suite, lint and mypy green. Gate (beats random search) still passes on a quick check
+- [x] `_crossover` swaps about 50% of the genes of crossing pairs, and none when `crossover_rate=0`
+- [x] `_mutate` changes each gene with probability `mutation_rate` (±10%), always to a different value, never outside range
+- [x] Default `mutation_rate` is 1/n_params. Removed parameters raise `TypeError`. Ledger tests E-2/E-3 updated to the new rule
+- [x] Full suite, lint and mypy green. Gate (beats random search) still passes on a quick check
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `tests/bench/run.py`, `tests/test_bench.py`
 **Scope:** M
 

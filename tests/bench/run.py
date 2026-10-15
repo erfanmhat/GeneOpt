@@ -106,7 +106,7 @@ PROBLEMS = {
 # --- optimisers: each searches index vectors and calls f until Exhausted ---------
 
 
-def run_geneopt(p: Problem, f: Budget, seed: int, swap_rate: float | None = None) -> None:
+def run_geneopt(p: Problem, f: Budget, seed: int) -> None:
     from geneopt import GeneticAlgorithm
 
     names = [f"p{i}" for i in range(len(p.sizes))]
@@ -116,7 +116,6 @@ def run_geneopt(p: Problem, f: Budget, seed: int, swap_rate: float | None = None
         env,
         maximize=False,
         population_size=POPULATION,
-        crossover_swap_rate=swap_rate,
         # GeneOpt answers repeats from its own cache, so they never reach the call cap; bound it by
         # the same number of proposals the cap allows everyone else (CALL_CAP x N individuals)
         generations=max(1, CALL_CAP * f.n_unique // POPULATION),
@@ -241,35 +240,6 @@ DISTRIBUTIONS = {"geneopt": "GeneOpt", "pygad": "pygad", "deap": "deap", "pymoo"
                  "optuna": "optuna", "nevergrad": "nevergrad"}  # fmt: skip
 
 
-# --- variants: "geneopt@<swap rate>" compares crossover settings (spec 012) --------
-
-
-def parse_optimiser(name: str) -> tuple[str, float | None]:
-    """``geneopt@0.5`` -> ("geneopt", 0.5); ``geneopt@1/n`` and plain names -> (name, None)."""
-    base, _, variant = name.partition("@")
-    if base not in OPTIMISERS:
-        raise ValueError(f"unknown optimiser {base!r}")
-    if not variant or variant == "1/n":
-        if variant and base != "geneopt":
-            raise ValueError(f"{base} takes no variant")
-        return base, None
-    if base != "geneopt":
-        raise ValueError(f"{base} takes no variant")
-    rate = float(variant)  # ValueError for anything that isn't a number
-    if not 0 <= rate <= 1:
-        raise ValueError(f"swap rate {rate} not in [0, 1]")
-    return base, rate
-
-
-def expand_optimisers(optimisers: list[str], swap_rates: list[str]) -> list[str]:
-    if not swap_rates:
-        return list(optimisers)
-    out: list[str] = []
-    for o in optimisers:
-        out += [f"geneopt@{r}" for r in swap_rates] if o == "geneopt" else [o]
-    return out
-
-
 # --- running & reporting ----------------------------------------------------------
 
 
@@ -282,11 +252,7 @@ def run_one(problem_name: str, optimiser: str, seed: int, budget_scale: float) -
     started = time.perf_counter()
     error = None
     try:
-        base, swap_rate = parse_optimiser(optimiser)
-        if base == "geneopt":
-            run_geneopt(p, f, seed, swap_rate)
-        else:
-            OPTIMISERS[base](p, f, seed)
+        OPTIMISERS[optimiser](p, f, seed)
     except Exhausted:
         pass
     except Exception as e:  # reported as "crashed", never aborts the table
@@ -397,25 +363,12 @@ def main(argv=None) -> int:
     ap.add_argument("--quick", action="store_true", help="2 seeds, 10%% budget: smoke test")
     ap.add_argument("--jobs", type=int, default=os.cpu_count())
     ap.add_argument("--out", help="also write the Markdown report to this file")
-    ap.add_argument(
-        "--geneopt-swap-rate",
-        action="append",
-        default=[],
-        metavar="RATE",
-        help="run GeneOpt once per value (a number in [0, 1] or '1/n'); repeatable (spec 012)",
-    )
     args = ap.parse_args(argv)
     seeds, scale = (2, 0.1) if args.quick else (args.seeds, 1.0)
-    optimisers = expand_optimisers(args.only.split(","), args.geneopt_swap_rate)
-    problems = args.problems.split(",")
-    for o in optimisers:
-        try:
-            parse_optimiser(o)
-        except ValueError as e:
-            ap.error(str(e))
-    unknown = set(problems) - set(PROBLEMS)
+    optimisers, problems = args.only.split(","), args.problems.split(",")
+    unknown = (set(optimisers) - set(OPTIMISERS)) | (set(problems) - set(PROBLEMS))
     if unknown:
-        ap.error(f"unknown problems: {sorted(unknown)}")
+        ap.error(f"unknown: {sorted(unknown)}")
 
     tasks = [(p, o, s, scale) for p in problems for o in optimisers for s in range(seeds)]
     with ProcessPoolExecutor(args.jobs) as pool:

@@ -72,34 +72,3 @@ def test_quick_benchmark_runs_every_optimiser(capsys):
         assert f"| {name} |" in out
     assert "crashed" not in out
     assert "**Gate" in out and code in (0, 1)  # smoke test only: the gate is judged on full runs
-
-
-@pytest.mark.parametrize(
-    "name, expected",
-    [("geneopt", ("geneopt", None)), ("geneopt@1/n", ("geneopt", None)), ("geneopt@0.5", ("geneopt", 0.5)),
-     ("pymoo", ("pymoo", None))],
-)  # fmt: skip
-def test_optimiser_variants_parse(name, expected):
-    assert bench.parse_optimiser(name) == expected
-
-
-@pytest.mark.parametrize("name", ["geneopt@x", "geneopt@1.5", "pymoo@0.5", "nope"])
-def test_bad_optimiser_variants_are_rejected(name):
-    with pytest.raises(ValueError):
-        bench.parse_optimiser(name)
-
-
-def test_swap_rate_flag_expands_geneopt_into_variants():
-    assert bench.expand_optimisers(["geneopt", "random"], ["1/n", "0.5"]) == [
-        "geneopt@1/n",
-        "geneopt@0.5",
-        "random",
-    ]
-    assert bench.expand_optimisers(["geneopt", "random"], []) == ["geneopt", "random"]
-
-
-def test_gate_applies_to_every_geneopt_variant():
-    results = {"holder": {"geneopt@0.5": {"median": -19.0}, "geneopt@1/n": {"median": -10.0},
-                          "random": {"median": -15.0}}}  # fmt: skip
-    failures = bench.gate(results)
-    assert len(failures) == 1 and "geneopt@1/n" in failures[0]

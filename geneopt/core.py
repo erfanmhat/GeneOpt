@@ -3,7 +3,6 @@
 import inspect
 import logging
 import math
-import numbers
 import time
 from collections.abc import Callable, Mapping
 from concurrent.futures import Executor
@@ -17,10 +16,6 @@ from .cache import GenomeCache, _py, fingerprint
 from .history import History
 
 log = logging.getLogger("geneopt")
-
-MAX_MUTATION_RATE = 0.5  # ceiling of the adaptive rate (reached when the population has fully converged)
-CREEP_SIGMA = 0.1  # std of a creep step, as a fraction of the parameter's value count
-
 
 StopReason = Literal["generations", "early_stopping", "target_score"]
 
@@ -52,15 +47,6 @@ def diversity(genomes) -> float:
     return float(np.mean(disagree))
 
 
-def _mutation_rate(base: float, diversity_value: float, adaptive: bool) -> float:
-    """Per-gene mutation probability: ``base``, rising linearly to ``max(MAX_MUTATION_RATE, base)``
-    as the population converges (diversity 1 -> 0)."""
-    if not adaptive:
-        return base
-    ceiling = max(MAX_MUTATION_RATE, base)
-    return base + (ceiling - base) * (1 - diversity_value)
-
-
 def _tournament(signed_scores, k: int, m: int, rng) -> np.ndarray:
     """Indices of ``m`` tournament winners, each the best of exactly ``k`` candidates."""
     n = len(signed_scores)
@@ -68,30 +54,23 @@ def _tournament(signed_scores, k: int, m: int, rng) -> np.ndarray:
     return candidates[np.arange(m), np.argmax(signed_scores[candidates], axis=1)]
 
 
-def _crossover(p1, p2, swap_rate: float, crossover_rate: float, rng) -> tuple[np.ndarray, np.ndarray]:
-    """Per-gene swap between paired parents: each pair crosses with ``crossover_rate``, and then
-    each gene is exchanged with ``swap_rate``."""
-    swap = rng.random(p1.shape) < swap_rate
+def _crossover(p1, p2, crossover_rate: float, rng) -> tuple[np.ndarray, np.ndarray]:
+    """Uniform crossover: each pair crosses with ``crossover_rate``; a crossing pair exchanges
+    each gene with probability 1/2."""
+    swap = rng.random(p1.shape) < 0.5
     swap &= (rng.random(len(p1)) < crossover_rate)[:, None]
     return np.where(swap, p2, p1), np.where(swap, p1, p2)
 
 
-def _mutate(genomes, rate: float, sizes, ordered, rng) -> np.ndarray:
-    """Each gene mutates with probability ``rate``: a local creep for ordered numeric
-    parameters, a uniform pick among the other values otherwise."""
+def _mutate(genomes, rate: float, sizes, rng) -> np.ndarray:
+    """Random resetting: each gene, with probability ``rate``, takes a uniformly chosen other value."""
     hit = rng.random(genomes.shape) < rate
-    for j, (size, is_ordered) in enumerate(zip(sizes, ordered, strict=True)):
+    for j, size in enumerate(sizes):
         rows = np.flatnonzero(hit[:, j])
         if size < 2 or not len(rows):
             continue
-        current = genomes[rows, j]
-        if is_ordered:
-            step = np.rint(rng.normal(0, CREEP_SIGMA * size, len(rows))).astype(int)
-            step[step == 0] = rng.choice([-1, 1], size=(step == 0).sum())
-            genomes[rows, j] = np.clip(current + step, 0, size - 1)
-        else:
-            other = rng.integers(0, size - 1, len(rows))
-            genomes[rows, j] = other + (other >= current)
+        other = rng.integers(0, size - 1, len(rows))
+        genomes[rows, j] = other + (other >= genomes[rows, j])  # skip the current value
     return genomes
 
 
@@ -104,13 +83,6 @@ def _score(objective, params: dict, retries: int) -> float:
         except Exception:
             time.sleep(0.5 * 2**attempt)
     return objective(**params)  # last attempt: its exception propagates
-
-
-def _is_ordered_numeric(values) -> bool:
-    if len(values) < 3 or not all(isinstance(v, numbers.Real) and not isinstance(v, bool) for v in values):
-        return False
-    diffs = np.diff(np.asarray(values, dtype=float))
-    return bool((diffs >= 0).all() or (diffs <= 0).all())
 
 
 def _check_environment(environment) -> dict[str, list]:
@@ -147,9 +119,7 @@ class GeneticAlgorithm:
         initial_population_size: int | None = None,
         generations: int = 100,
         crossover_rate: float = 0.9,
-        crossover_swap_rate: float | None = None,
-        mutation_rate: float = 0.05,
-        adaptive_mutation: bool = True,
+        mutation_rate: float | None = None,
         tournament_size: int = 3,
         elitism: int = 1,
         early_stopping_rounds: int | None = None,
@@ -166,12 +136,11 @@ class GeneticAlgorithm:
         env = _check_environment(environment)
         _check("crossover_rate", crossover_rate, 0 <= crossover_rate <= 1, "in [0, 1]")
         _check(
-            "crossover_swap_rate",
-            crossover_swap_rate,
-            crossover_swap_rate is None or 0 <= crossover_swap_rate <= 1,
+            "mutation_rate",
+            mutation_rate,
+            mutation_rate is None or 0 <= mutation_rate <= 1,
             "None or in [0, 1]",
         )
-        _check("mutation_rate", mutation_rate, 0 <= mutation_rate <= 1, "in [0, 1]")
         _check("population_size", population_size, population_size >= 2, ">= 2")
         _check(
             "initial_population_size",
@@ -208,16 +177,13 @@ class GeneticAlgorithm:
         self._env = env
         self._names = list(env)
         self._sizes = np.array([len(v) for v in env.values()])
-        self._ordered = np.array([_is_ordered_numeric(v) for v in env.values()])
         self._sign = 1.0 if maximize else -1.0
         self._population_size = population_size
         self._initial_population_size = initial_population_size or population_size
         self._generations = generations
         self._crossover_rate = crossover_rate
-        # per-gene swap probability; None keeps the 1/n_params rule
-        self._swap_rate = 1.0 / len(env) if crossover_swap_rate is None else crossover_swap_rate
-        self._mutation_rate = mutation_rate
-        self._adaptive_mutation = adaptive_mutation
+        # textbook default: one expected mutation per child (1 / number of genes)
+        self._mutation_rate = 1.0 / len(env) if mutation_rate is None else mutation_rate
         self._tournament_size = tournament_size
         self._elitism = elitism
         self._early_stopping_rounds = early_stopping_rounds
@@ -273,7 +239,6 @@ class GeneticAlgorithm:
         return failed
 
     def _next_generation(self, population, signed, rng) -> np.ndarray:
-        rate = _mutation_rate(self._mutation_rate, diversity(population), self._adaptive_mutation)
 
         elites: list[np.ndarray] = []
         seen: set[tuple[int, ...]] = set()
@@ -288,9 +253,9 @@ class GeneticAlgorithm:
         n_children = self._population_size - len(elites)
         n_pairs = (n_children + 1) // 2
         parents = population[_tournament(signed, self._tournament_size, 2 * n_pairs, rng)]
-        c1, c2 = _crossover(parents[:n_pairs], parents[n_pairs:], self._swap_rate, self._crossover_rate, rng)
+        c1, c2 = _crossover(parents[:n_pairs], parents[n_pairs:], self._crossover_rate, rng)
         children = np.vstack([c1, c2])[:n_children]
-        children = _mutate(children, rate, self._sizes, self._ordered, rng)
+        children = _mutate(children, self._mutation_rate, self._sizes, rng)
         return np.vstack([np.array(elites).reshape(-1, len(self._names)), children])
 
     def evaluations(self):

@@ -22,7 +22,7 @@ to **measure first, then change the default**.
 - [x] Task 2: Benchmark 1/n vs 0.2 vs 0.5 on all three problems (30 seeds), results in spec 012
 - [x] ~~Task 3: set the default to the winning swap rate~~. Replaced by user decision (2026-10-16):
   use the textbook operators instead of tuning the custom ones
-- [ ] Task 3: Standard operators: uniform crossover (0.5), random-resetting mutation (default 1/n_params),
+- [x] Task 3: Standard operators: uniform crossover (0.5), random-resetting mutation (default 1/n_params),
   tournament selection + elitism unchanged. `adaptive_mutation`, creep and `crossover_swap_rate` removed
 - [ ] Task 4: Benchmark the standard operators (30 seeds, all optimisers). Update specs 003/005/007/011/012,
   README, CHANGELOG
