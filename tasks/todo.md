@@ -56,9 +56,9 @@ Lint: `ruff check . && ruff format --check . && mypy geneopt` · Build: `python 
 ## Task 5: Competitor benchmark
 **Description:** `tests/bench/run.py` covers the three problems from 003 (Holder 2-D 4096² / 2,000 unique evals; Rastrigin 10-D × 256 / 5,000; categorical 6 × 5 labels / 500, hit rate). It runs seven optimisers: GeneOpt, random search, PyGAD, DEAP, pymoo GA, Optuna TPE and Nevergrad NGOpt, each as a small adapter. A shared memoising budget wrapper stops each run after N unique evaluations (with a 50 × N total-call cap). Seeds 0…N-1. Pins go in `tests/bench/requirements.txt`. Output is a Markdown table per problem (median, IQR or hit rate, unique evals, wall time). Crashes show as `crashed: …`.
 **Acceptance criteria:**
-- [ ] `python tests/bench/run.py --seeds 30` prints all 7 × 3 results. `--only` and `--quick` work
-- [ ] `tests/test_bench.py` (`-m bench`, deselected by default) runs `--quick`, and also unit-tests the budget wrapper (unique counting, stop, cap)
-- [ ] Results + seed count + library versions recorded in `specs/007-tests-and-ci.md` § Benchmark results. 003 hard gate (beats random search everywhere) checked. **If it fails → stop and report**
+- [x] `python tests/bench/run.py --seeds 30` prints all 7 × 3 results. `--only` and `--quick` work
+- [x] `tests/test_bench.py` (`-m bench`, deselected by default) runs `--quick`, and also unit-tests the budget wrapper (unique counting, stop, cap)
+- [x] Results + seed count + library versions recorded in `specs/007-tests-and-ci.md` § Benchmark results. 003 hard gate (beats random search everywhere) checked. **If it fails → stop and report**
 **Verification:** full local run in a scratch venv
 **Dependencies:** 2
 **Files:** `tests/bench/run.py`, `tests/bench/requirements.txt`, `tests/test_bench.py`, `pyproject.toml` (marker), `specs/007-tests-and-ci.md`

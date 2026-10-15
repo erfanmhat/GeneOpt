@@ -47,7 +47,7 @@ Make the 2.0 test suite meet spec 007:
 - [x] All 29 ledger IDs have tests. Coverage bar met
 
 ### Phase 3: Benchmarks & CI
-- [ ] Task 5: Benchmark harness (`tests/bench/`) vs 5 libraries + random search, results recorded
+- [x] Task 5: Benchmark harness (`tests/bench/`) vs 5 libraries + random search, results recorded
 - [ ] Task 6: `.github/workflows/ci.yml` (lint, test matrix, test-plots, build, publish, bench)
 
 ### Checkpoint C (complete)

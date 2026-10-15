@@ -1,0 +1,6 @@
+# Competitors for tests/bench/run.py (spec 007). Pinned so results are comparable over time.
+deap==1.4.4
+nevergrad==1.0.12
+optuna==5.0.0
+pygad==3.8.1
+pymoo==0.6.2
