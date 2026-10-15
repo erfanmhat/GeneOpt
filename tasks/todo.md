@@ -76,9 +76,9 @@ Tests: `python -m pytest -q` · Build: `pip wheel . --no-deps -w <scratch>` (the
 ## Task 7: Examples
 **Description:** `examples/quickstart.py` (Holder table), `examples/categorical.py`, and `examples/distributed_http/{objective,server,client,run_servers}.py` per 008/009 (stdlib client with bounded retries and 0.0-safe; server with `debug=False` and signature-checked JSON params; `run_servers.py` using `sys.executable`). Move `image/` → `docs/images/`.
 **Acceptance criteria:**
-- [ ] Client against a stdlib stub: `0.0` returned after 1 request. 400 → `ObjectiveError` after 1 request. 503,503,200 → score after 3 requests
-- [ ] Server param validation rejects missing/unknown params and decodes JSON values (tested as a pure function, no Flask needed)
-- [ ] `quickstart.py` and `categorical.py` run in tests with tiny budgets. There's no `debug=True` anywhere
+- [x] Client against a stdlib stub: `0.0` returned after 1 request. 400 → `ObjectiveError` after 1 request. 503,503,200 → score after 3 requests
+- [x] Server param validation rejects missing/unknown params and decodes JSON values (tested as a pure function, no Flask needed)
+- [x] `quickstart.py` and `categorical.py` run in tests with tiny budgets. There's no `debug=True` anywhere
 **Verification:** `pytest tests/test_examples.py`
 **Dependencies:** 5
 **Files:** `examples/**`, `tests/test_examples.py`, `docs/images/*` (moved)

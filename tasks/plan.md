@@ -45,7 +45,7 @@ package is deleted only in the final task.
 
 ### Phase 3: Surface
 - [x] Task 6: Plots + `evaluations()` / `to_frame()`
-- [ ] Task 7: Examples (quickstart, categorical, distributed_http)
+- [x] Task 7: Examples (quickstart, categorical, distributed_http)
 - [ ] Task 8: Delete 1.x package and files, rewrite README, CHANGELOG
 
 ### Checkpoint C (complete)
