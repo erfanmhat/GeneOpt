@@ -37,35 +37,34 @@ It also costs more than it gives:
 
 ---
 
-## B. `mutation_rate` is required
+## B. `mutation_rate`: a fixed default of 0.05
 
 ### Problem
 `mutation_rate=None` currently means 1/n_params. That's a formula hidden behind a default: two
 problems with different parameter counts silently get different mutation strengths, and the
 README can't state one number for "the default".
 
-### Decision (owner)
-**Required, no default.** Every call passes `mutation_rate` explicitly.
+### Decision (owner, revised 2026-10-16)
+**Default `mutation_rate=0.05`**, a plain number with no formula behind it. This replaces the
+earlier "required, no default" decision.
 
 ### Design
-- Signature: `mutation_rate: float`, keyword-only, no default. Omitting it raises
-  `TypeError: __init__() missing 1 required keyword-only argument: 'mutation_rate'`.
+- Signature: `mutation_rate: float = 0.05`, keyword-only. No `None`, no formula.
 - Validation is unchanged: `0 ≤ mutation_rate ≤ 1`, and a `ValueError` names the parameter.
 - **Meaning, stated once and identically in the docstring, the README and spec 003:**
   > *`mutation_rate`: the probability, per gene and per child, that random-resetting mutation
   > replaces that gene's value with a uniformly chosen **different** value.*
-- The README gives guidance, not a default: "per-gene rates between 0.01 and 0.1 are common, and
-  the right value depends on the problem (see the benchmark in 015)". Every example passes an
-  explicit value.
-- All tests, examples and the benchmark adapter pass `mutation_rate` explicitly. The benchmark's
-  choice is disclosed in 015 rather than hidden in GeneOpt.
+- 0.05 sits inside the common 0.01–0.1 range. On a 20-parameter problem it mutates one gene per
+  child on average; on 100 parameters, five. The README says so, so users with many parameters
+  know when to lower it.
+- The benchmark adapter (015) passes its value explicitly and discloses it.
 
 ### Acceptance criteria
-- [ ] Constructing without `mutation_rate` raises `TypeError` naming it.
-- [ ] `mutation_rate=None` raises (`TypeError` or `ValueError`), so no implicit formula is left.
-- [ ] The README, quickstart, categorical example and HTTP client all pass an explicit value.
-      The README-embed test still passes.
-- [ ] `test_E_3_*` asserts that the configured rate is used unchanged, with no default.
+- [ ] Omitting `mutation_rate` gives a measured per-gene mutation frequency of 0.05 ± 10%, for
+      both a 2-parameter and a 50-parameter environment.
+- [ ] `mutation_rate=None` raises `ValueError` naming the parameter, so no implicit formula is left.
+- [ ] No mention of `1/n_params` as a mutation default remains in `geneopt/`, README or spec 003.
+- [ ] `test_E_3_*` asserts that the configured rate is used unchanged during the run.
 
 ---
 
@@ -111,9 +110,8 @@ and tests change.
   just produces two clones. This is documented, not changed.
 - Spec 003 §1 and the README "Parameters" table are updated to use p_c / p_s terminology.
 
-### Open decision
-- [ ] Should `crossover_probability` also be **required**, for symmetry with `mutation_rate`?
-      Default if undecided: keep **0.9**. This is the one value the spec doesn't fix.
+### Decision (owner, 2026-10-16)
+`crossover_probability` keeps its default of **0.9**. It isn't required.
 
 ### Acceptance criteria
 - [ ] `crossover_rate` raises `TypeError`; `crossover_probability` is accepted and validated.
@@ -122,8 +120,32 @@ and tests change.
 - [ ] A statistical test with long genomes: the fraction of pairs that recombine is p_c ± 0.03, for
       p_c ∈ {0.3, 0.9}.
 - [ ] With p_c = 0, children equal their parents before mutation.
-- [ ] The README describes p_c and p_s in separate sentences, matching steps 1–3. Any remaining
-      wording that mixes the two (grep for "pair of parents performs") is gone.
+- [ ] The README rows below replace the current `crossover_rate` and `mutation_rate` rows word
+      for word, and the `initial_population_size` row is deleted (A). Any wording that mixes p_c
+      and p_s (grep for "pair of parents performs") is gone.
+
+---
+
+## README text (exact)
+
+Parameters table rows:
+
+| parameter | default | meaning |
+|---|---|---|
+| `crossover_probability` | `0.9` | chance that two selected parents recombine. If they don't, the children start as copies of the parents. |
+| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. |
+
+Paragraph under the table, headed **How a child is made**:
+
+> 1. **Select** two parents, each the winner of a tournament of `tournament_size` random
+>    individuals.
+> 2. **Recombine** with probability `crossover_probability`: for every gene separately, a fair
+>    coin decides which parent child 1 takes it from, and child 2 takes it from the other parent.
+>    The coin is always fair (50/50) so neither parent is favoured; this isn't a setting.
+> 3. **Mutate** every gene of both children with probability `mutation_rate`.
+>
+> With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
+> 100 parameters gets five. For many parameters, try 1 / (number of parameters).
 
 ---
 

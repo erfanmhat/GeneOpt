@@ -36,8 +36,9 @@ reaches 0 at evaluation 3,247. The unfairness is in the problem, not the library
    optimiser gets a special initial point. Where a library seeds at the centre (NGOpt), the
    randomised optimum makes that harmless, and it is checked (principle 7).
 6. **Disclosed configuration, no per-problem tuning.** Each library uses its defaults plus a
-   shared population size. GeneOpt's required `mutation_rate` (014) is run at a small fixed set
-   of values, each shown as its own row, never tuned per problem.
+   shared population size. GeneOpt runs at its defaults (014: `mutation_rate` 0.05,
+   `crossover_probability` 0.9) plus a small fixed set of `mutation_rate` values, each shown as
+   its own row, never tuned per problem.
 7. **Head-start check.** Each run records its best value within the first 50 evaluations. If any
    optimiser's early best is already within the final target, the problem is flagged and
    investigated before results are used.

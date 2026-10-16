@@ -35,8 +35,9 @@ returns stale scores across runs, and it can't store non-numeric parameters.
 | 011 | [Removed in 2.0.0](011-removed-in-2.0.md) | Hard break: every 1.x name deleted, no shims | 🟡 policy |
 | 012 | [Crossover mixing](012-crossover-mixing.md) | Benchmark gap → standard GA operators adopted. Local refinement is the open follow-up | 🟠 high |
 | 013 | [Releasing 2.0.0](013-release-2.0.0.md) | Push, CI on the full matrix, PyPI trusted publisher, tag | 🟡 process |
-| 014 | [Operator parameters](014-operator-parameters.md) | Remove `initial_population_size`; `mutation_rate` required; uniform crossover named and described by the standard (p_c, p_s = 0.5) | 🟠 high |
+| 014 | [Operator parameters](014-operator-parameters.md) | Remove `initial_population_size`; `mutation_rate` default 0.05; uniform crossover named and described by the standard (p_c, p_s = 0.5) | 🟠 high |
 | 015 | [Fair benchmark suite](015-fair-benchmark-suite.md) | COCO bbob-mixint + IOHprofiler PBO, randomised instances, ECDF scoring, head-start check; prototype tested | 🟠 high |
+| 016 | [Benchmark figures](016-benchmark-plots.md) | ECDF, Dolan–Moré performance profile and speed–success Pareto scatter for the 015 report | 🟡 medium |
 
 ## Bug ledger
 
@@ -96,6 +97,7 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 |---|---|---|
 | Operator parameter cleanup | [014](014-operator-parameters.md) | Next stage. Lands before 2.0.0 is published |
 | Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Next stage. Replaces the 007 problems, which favoured separable-problem specialists. Prototype: GeneOpt 3rd of 7 |
+| Benchmark figures | [016](016-benchmark-plots.md) | Proposed; three open questions for the owner. Built with or after 015 |
 | Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | To be judged on the 015 suite, not the old Rastrigin/Holder problems |
 | PyPI publishing | [013](013-release-2.0.0.md) | CI is green on all 3 OSes (PR #1). Waiting on a one-time PyPI setting by the owner, then merge and tag |
 | `History.save()` and `int32` genome storage | [002 §1](002-history-and-plots.md) | Marked *not built yet*. Nobody needs them so far |
