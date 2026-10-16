@@ -125,3 +125,11 @@ def test_wilcoxon_reports_counts_and_a_p_value():
 def test_compact_sizes():
     assert score.compact([2, 2, 4, 4, 8, 8, 16, 16, 256, 256]) == "2 ×2, 4 ×2, 8 ×2, 16 ×2, 256 ×2"
     assert score.compact([2] * 64) == "2 ×64" and score.compact([5, 7]) == "5, 7"
+
+
+def test_budget_used_shows_optimisers_that_stall():
+    rs = [rec("a", 1.0, budget=1000), rec("b", 1.0, budget=1000)]
+    rs[1]["evaluations"] = 250  # stopped by the duplicate-call cap
+    s = score.score(rs)
+    assert s["budget_used"]["mixint"] == {"a": 1.0, "b": 0.25}
+    assert "budget used" in score.report(rs)

@@ -139,13 +139,16 @@ def score(records) -> dict:
         for suite, pairs in finals.items()
     }
     rows = runs_rows(records)
-    area, success = defaultdict(dict), defaultdict(dict)
+    area, success, used = defaultdict(dict), defaultdict(dict), defaultdict(dict)
     for suite in final:
         for o in optimisers:
             mine = [x for x in rows if x["suite"] == suite and x["algorithm"] == o]
             area[suite][o] = ecdf_area(mine)
             at = [x for x in mine if x["target"] == success_target(suite)]
             success[suite][o] = sum(x["success_bool"] for x in at) / len(at) if at else 0.0
+            runs = [r for r in records if r["suite"] == suite and r["optimiser"] == o]
+            # below 1: the run stalled (only re-proposed known points until the call cap) or crashed
+            used[suite][o] = statistics.median(r["evaluations"] / r["budget"] for r in runs) if runs else 0.0
     mean_rank = {
         suite: {o: statistics.mean(ranks(medians)[o] for medians in pairs.values()) for o in optimisers}
         for suite, pairs in final.items()
@@ -157,7 +160,7 @@ def score(records) -> dict:
     ]  # fmt: skip
     return {
         "optimisers": optimisers, "references": refs, "final": final, "per_instance": per_instance,
-        "ecdf_area": dict(area), "success": dict(success), "mean_rank": mean_rank,
+        "ecdf_area": dict(area), "success": dict(success), "budget_used": dict(used), "mean_rank": mean_rank,
         "head_starts": head_starts, "crashes": [r for r in records if r["error"]],
     }  # fmt: skip
 
@@ -276,6 +279,11 @@ def report(records, header: str = "") -> str:
         )
         lines.append(f"| **success at {success_target(suite):.2g}** | | "
                      + " | ".join(f"{s['success'][suite][o]:.0%}" for o in opts) + " |")  # fmt: skip
+        lines.append(
+            "| **budget used (median)** | | "
+            + " | ".join(f"{s['budget_used'][suite][o]:.0%}" for o in opts)
+            + " |"
+        )
         if MAIN_ROW in opts:
             lines += [
                 "",
