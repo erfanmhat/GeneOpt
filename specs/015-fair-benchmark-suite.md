@@ -128,9 +128,9 @@ caps total proposals at 50 × the budget, as for every library (007).
 Report row labels: `geneopt[mr=1/D]`, `geneopt[mr=0.5/D]` and `geneopt[mr=2/D]`. The library
 default of 0.05 isn't run as a row of its own. It coincides with the main row at D = 20 anyway.
 
-The 20-D cardinalities are COCO's (each integer cardinality repeated over its share of the
-variables); the harness reads them from `cocoex` and prints the list it actually got in the
-report, so this table is checked rather than trusted.
+The cardinalities were read from `cocoex` 2.8.2 (instance 1). The two 256-value genes at D = 10,
+and four at D = 20, are the continuous variables on the shared grid. The harness also prints the
+list it actually got in each report.
 
 ## Prototype test (2026-10-16)
 
