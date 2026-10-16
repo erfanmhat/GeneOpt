@@ -38,9 +38,9 @@ Tests: `python -m pytest -q` (+ `--bench` in the bench env) · Lint: `ruff check
 ## Task 4: CLI and CI sharding
 **Description:** `run.py --suite {mixint,pbo,legacy}` with `--dims`, `--instances`, `--functions`, `--only`, `--out-dir`, `--report-only`, `--budget-scale`. `bench.yml`: matrix optimiser × suite × instance, artifacts, a report job that merges and gates.
 **Acceptance criteria:**
-- [ ] `--bench` smoke test runs mixint f1 and PBO F19 at a tiny budget for two optimisers end-to-end and writes a report
-- [ ] `--report-only` on shard outputs gives the same report as one combined run
-- [ ] `bench.yml` passes `actionlint`-style review (valid YAML, matrix 70 jobs, report job needs all)
+- [x] `--bench` smoke test runs mixint f1 and PBO F19 at a tiny budget for two optimisers end-to-end and writes a report
+- [x] `--report-only` on shard outputs gives the same report as one combined run
+- [x] `bench.yml` passes `actionlint`-style review (valid YAML, matrix 70 jobs, report job needs all)
 **Verification:** `pytest --bench`, YAML parse
 **Dependencies:** Task 3
 **Files:** `tests/bench/run.py`, `tests/test_bench.py`, `.github/workflows/bench.yml`

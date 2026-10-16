@@ -34,8 +34,8 @@ def precision(suite: str, value: float, ref: float) -> float:
     """f - f_opt for bbob-mixint; relative gap (ref - y) / |ref| for PBO (maximised)."""
     if suite == "mixint":
         return max(0.0, value - ref)
-    gap = ref - value
-    return max(0.0, gap / abs(ref) if ref else gap)
+    gap = (ref - value) / abs(ref) if ref else ref - value
+    return 0.0 if gap < 1e-12 else gap  # PBO values are sums of fractions: snap rounding noise to a hit
 
 
 def references(records) -> dict[tuple, tuple[float, bool]]:
@@ -209,12 +209,23 @@ def wilcoxon(s: dict, suite: str) -> list[tuple[str, int, int, int, float | None
     return out
 
 
+def compact(sizes) -> str:
+    """[2, 2, 4, 4, 256] -> '2 ×2, 4 ×2, 256'."""
+    groups: list[list[int]] = []
+    for size in sizes:
+        if groups and groups[-1][0] == size:
+            groups[-1][1] += 1
+        else:
+            groups.append([size, 1])
+    return ", ".join(f"{v} ×{n}" if n > 1 else str(v) for v, n in groups)
+
+
 def _fmt(v: float) -> str:
     return "∞" if math.isinf(v) else f"{v:.3g}"
 
 
 def report(records, header: str = "") -> str:
-    records = list(records)
+    records = sorted(records, key=lambda r: (problem(r), r["optimiser"]))  # same report however sharded
     s = score(records)
     opts = s["optimisers"]
     lines = [header, ""] if header else []
@@ -234,7 +245,7 @@ def report(records, header: str = "") -> str:
         if r["config"] and key not in seen:
             seen.add(key)
             params = ", ".join(f"`{k}={v}`" for k, v in r["config"].items())
-            sizes = ", ".join(map(str, r["sizes"]))
+            sizes = compact(r["sizes"])
             lines.append(
                 f"| {r['suite']} | {r['dim']} | {sizes} | {r['budget']} | {r['optimiser']} | {params} |"
             )
@@ -254,7 +265,9 @@ def report(records, header: str = "") -> str:
         for (function, dim), med in sorted(pairs.items()):
             best = min(med.values())
             cells = [f"**{_fmt(med[o])}**" if med[o] == best else _fmt(med[o]) for o in opts]
-            lines.append(f"| {function} | {dim} | " + " | ".join(cells) + " |")
+            lines.append(
+                f"| {'f' if suite == 'mixint' else 'F'}{function} | {dim} | " + " | ".join(cells) + " |"
+            )
         lines.append(
             "| **mean rank** | | " + " | ".join(f"{s['mean_rank'][suite][o]:.2f}" for o in opts) + " |"
         )

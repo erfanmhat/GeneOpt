@@ -33,6 +33,7 @@ def test_evaluations_to_target_reads_the_trace():
 def test_pbo_precision_is_the_relative_gap_to_the_reference():
     assert score.precision("pbo", 9.0, 10.0) == pytest.approx(0.1)
     assert score.precision("pbo", 10.0, 10.0) == 0
+    assert score.precision("pbo", 10.0 - 1e-15, 10.0) == 0  # rounding noise is a hit
     assert score.precision("mixint", 3.5, 1.5) == 2.0
 
 
@@ -119,3 +120,8 @@ def test_wilcoxon_reports_counts_and_a_p_value():
     s = score.score(suite_records(9, losses=1))
     [(o, wins, ties, losses, p)] = score.wilcoxon(s, "mixint")
     assert (o, wins, ties, losses) == ("random", 9, 0, 1) and 0 < p < 0.05
+
+
+def test_compact_sizes():
+    assert score.compact([2, 2, 4, 4, 8, 8, 16, 16, 256, 256]) == "2 ×2, 4 ×2, 8 ×2, 16 ×2, 256 ×2"
+    assert score.compact([2] * 64) == "2 ×64" and score.compact([5, 7]) == "5, 7"

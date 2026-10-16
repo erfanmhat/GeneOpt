@@ -1,12 +1,10 @@
 name: Benchmark
 
-# Opt-in: the full run takes ~20 min. Trigger manually, or label a PR "perf".
+# Opt-in (spec 015): the fair suite at CI scope, bbob-mixint D=10 and PBO n=64, instances 1-5,
+# budget 100 x D. Sharded by optimiser x suite x instance so no job nears GitHub's 6-hour limit
+# (the slowest, Optuna on PBO, is ~13 runs x 8 min). Trigger manually, or label a PR "perf".
 on:
   workflow_dispatch:
-    inputs:
-      seeds:
-        description: Seeds per optimiser and problem
-        default: "30"
   pull_request:
     types: [labeled, synchronize]
 
@@ -14,29 +12,65 @@ permissions:
   contents: read
 
 jobs:
-  bench:
+  run:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write # to post the results table
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        optimiser: [geneopt, random, pygad, deap, pymoo, optuna, nevergrad]
+        suite: [mixint, pbo]
+        instance: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install -e . -r tests/bench/requirements.txt
-      - name: Run benchmark
-        env:
-          SEEDS: ${{ inputs.seeds || '30' }}
-        # the exit code carries the spec 003 gate; report first, fail after posting
-        run: python tests/bench/run.py --seeds "$SEEDS" --out bench.md || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
+      - run: python -m pytest -q --bench tests/test_bench.py tests/test_bench_suites.py tests/test_bench_score.py
+        if: matrix.optimiser == 'geneopt' && matrix.suite == 'mixint' && matrix.instance == 1
+      # a shard holds one optimiser, so its own gate can't fail; the report job judges the merge
+      - run: >-
+          python tests/bench/run.py --suite ${{ matrix.suite }} --instances ${{ matrix.instance }}
+          --only ${{ matrix.optimiser }} --out-dir results --jobs 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: records-${{ matrix.suite }}-${{ matrix.optimiser }}-${{ matrix.instance }}
+          path: results
+
+  report:
+    needs: run
+    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # to post the report
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . -r tests/bench/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: records-*
+          merge-multiple: true
+          path: results
+      # the exit code carries the spec 015 gate; report first, fail after posting
+      - run: python tests/bench/run.py --report-only results --out bench.md || echo "GATE_FAILED=1" >> "$GITHUB_ENV"
       - run: cat bench.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-report
+          path: |
+            bench.md
+            results
       - if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh pr comment "${{ github.event.pull_request.number }}" --body-file bench.md
       - if: env.GATE_FAILED == '1'
         run: |
-          echo "::error::GeneOpt did not beat random search on every problem (spec 003 gate)"
+          echo "::error::The main GeneOpt row failed the spec 015 gate against random search"
           exit 1

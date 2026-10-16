@@ -103,3 +103,41 @@ def test_nevergrad_is_fast_on_binary_problems():
     with pytest.raises(bench.Exhausted):
         bench.run_nevergrad(p, f, 1)
     assert time.perf_counter() - started < 30
+
+
+# --- CLI (spec 015 task 4) ---------------------------------------------------------
+
+SMOKE = ["--functions", "1", "--instances", "1-2", "--budget-scale", "0.1", "--jobs", "2"]
+
+
+@pytest.mark.bench
+@pytest.mark.parametrize("suite, dims, function", [("mixint", "10", "1"), ("pbo", "64", "19")])
+def test_fair_suite_runs_end_to_end(tmp_path, capsys, suite, dims, function):
+    args = ["--suite", suite, "--dims", dims, "--only", "geneopt,random", "--out-dir", str(tmp_path)]
+    args += [*SMOKE, "--functions", function, "--out", str(tmp_path / "r.md")]
+    code = bench.main(args)
+    text = (tmp_path / "r.md").read_text()
+    assert code in (0, 1) and "## Configuration" in text and "Head-start check" in text
+    # (three GeneOpt rows + random) x 2 instances: one file each, so CI shards never overwrite each other
+    assert len(list((tmp_path / suite / "records").glob("*.jsonl"))) == 8
+    assert "crashed" not in capsys.readouterr().out.lower()
+
+
+@pytest.mark.bench
+def test_report_only_on_shards_equals_one_combined_run(tmp_path):
+    common = ["--suite", "mixint", "--dims", "10", *SMOKE]
+    bench.main(
+        [
+            *common,
+            "--only",
+            "geneopt,random",
+            "--out-dir",
+            str(tmp_path / "all"),
+            "--out",
+            str(tmp_path / "all.md"),
+        ]
+    )
+    for only in ("geneopt", "random"):
+        bench.main([*common, "--only", only, "--out-dir", str(tmp_path / "shards" / only)])
+    bench.main(["--report-only", str(tmp_path / "shards"), "--out", str(tmp_path / "merged.md")])
+    assert (tmp_path / "merged.md").read_text() == (tmp_path / "all.md").read_text()

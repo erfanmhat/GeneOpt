@@ -1,7 +1,12 @@
-"""Benchmark GeneOpt against other optimisation libraries (spec 007 § Benchmarks).
+"""Benchmark GeneOpt against other optimisation libraries (specs 007, 015).
 
     pip install -e . -r tests/bench/requirements.txt
-    python tests/bench/run.py --seeds 30 [--only geneopt,random] [--problems holder] [--quick] [--out r.md]
+    # fair suites (spec 015): COCO bbob-mixint and IOHprofiler PBO; records + logs under --out-dir
+    python tests/bench/run.py --suite mixint [--dims 10,20] [--instances 1-15] [--functions 1,15] [--out r.md]
+    python tests/bench/run.py --suite pbo [--dims 64,100] [--instances 1-5] [--only geneopt,random]
+    python tests/bench/run.py --report-only bench-results --out r.md   # merge shards into one report
+    # legacy problems (spec 007): adapter smoke test only, not used for any claim
+    python tests/bench/run.py --suite legacy --quick
 
 Every optimiser searches the same integer index space under the same budget of *unique*
 evaluations. Repeats are memoised and free for everyone. Each run stops after N unique
@@ -13,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import json
 import math
 import os
 import random
@@ -431,15 +437,92 @@ def report(results: dict[str, dict[str, dict]], seeds: int, scale: float) -> str
     return "\n".join(lines)
 
 
+def _ints(text: str) -> list[int]:
+    """'1-5' or '1,3,7' -> ints."""
+    if "-" in text:
+        lo, hi = map(int, text.split("-"))
+        return list(range(lo, hi + 1))
+    return [int(x) for x in text.split(",")]
+
+
+def _write(text: str, out: str | None) -> None:
+    print(text)
+    if out:
+        Path(out).write_text(text + "\n")
+
+
+def _header(suite: str) -> str:
+    versions = ", ".join(f"{d} {version(d)}" for d in [*DISTRIBUTIONS.values(), "coco-experiment", "ioh"])
+    return f"# Fair benchmark: {suite}\n\nPython {sys.version.split()[0]} · {versions}"
+
+
+def _run_record(args: tuple) -> dict:
+    return run_fair(*args)
+
+
+def main_fair(args) -> int:
+    import score
+    import suites
+
+    dims = _ints(args.dims) if args.dims else [{"mixint": 10, "pbo": 64}[args.suite]]
+    functions = _ints(args.functions) if args.functions else list(suites.FUNCTIONS[args.suite])
+    wanted = args.only.split(",") if args.only else None
+    tasks = []
+    for dim in dims:
+        labels = list(optimisers(args.suite, dim))
+        chosen = [x for x in labels if wanted is None or x in wanted or x.split("[")[0] in wanted]
+        tasks += [
+            (args.suite, f, dim, i, label, args.out_dir, args.budget_scale)
+            for f in functions for i in _ints(args.instances) for label in chosen
+        ]  # fmt: skip
+    folder = Path(args.out_dir) / args.suite / "records"
+    folder.mkdir(parents=True, exist_ok=True)
+    records = []
+    with ProcessPoolExecutor(args.jobs) as pool:
+        for record in pool.map(_run_record, tasks):  # written as they finish, so a stopped run keeps its data
+            records.append(record)
+            # one file per (row, instance): CI shards by instance and merges the files into one folder
+            name = f"{record['optimiser'].replace('/', '_')}_i{record['instance']}.jsonl"
+            with open(folder / name, "a") as fh:
+                fh.write(json.dumps(record) + "\n")
+    _write(score.report(records, _header(args.suite)), args.out)
+    return 1 if score.gate(score.score(records)) else 0
+
+
+def main_report(args) -> int:
+    import score
+
+    records = [
+        json.loads(line) for path in sorted(Path(args.report_only).rglob("*.jsonl")) for line in path.open()
+    ]
+    suite = ", ".join(sorted({r["suite"] for r in records}))
+    _write(score.report(records, _header(suite)), args.out)
+    return 1 if score.gate(score.score(records)) else 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--seeds", type=int, default=30)
-    ap.add_argument("--only", default=",".join(OPTIMISERS), help="comma-separated optimisers")
-    ap.add_argument("--problems", default=",".join(PROBLEMS), help="comma-separated problems")
-    ap.add_argument("--quick", action="store_true", help="2 seeds, 10%% budget: smoke test")
+    ap.add_argument("--suite", choices=["mixint", "pbo", "legacy"], default="legacy")
+    ap.add_argument("--dims", help="fair suites: comma-separated (default: 10 for mixint, 64 for pbo)")
+    ap.add_argument("--instances", default="1-5", help="fair suites: '1-5' or '1,3'")
+    ap.add_argument("--functions", help="fair suites: comma-separated function ids (default: all)")
+    ap.add_argument("--budget-scale", type=float, default=1.0, help="fair suites: fraction of 100 x D")
+    ap.add_argument("--out-dir", default="bench-results", help="fair suites: records and COCO/IOH logs")
+    ap.add_argument(
+        "--report-only", metavar="DIR", help="merge the *.jsonl records under DIR into one report"
+    )
+    ap.add_argument("--seeds", type=int, default=30, help="legacy only")
+    ap.add_argument("--only", help="comma-separated optimisers ('geneopt' selects every GeneOpt row)")
+    ap.add_argument("--problems", default=",".join(PROBLEMS), help="legacy only: comma-separated problems")
+    ap.add_argument("--quick", action="store_true", help="legacy only: 2 seeds, 10%% budget: smoke test")
     ap.add_argument("--jobs", type=int, default=os.cpu_count())
     ap.add_argument("--out", help="also write the Markdown report to this file")
     args = ap.parse_args(argv)
+    if args.report_only:
+        return main_report(args)
+    if args.suite != "legacy":
+        return main_fair(args)
+    args.only = args.only or ",".join(OPTIMISERS)
     seeds, scale = (2, 0.1) if args.quick else (args.seeds, 1.0)
     optimisers, problems = args.only.split(","), args.problems.split(",")
     unknown = (set(optimisers) - set(OPTIMISERS)) | (set(problems) - set(PROBLEMS))
@@ -456,11 +539,7 @@ def main(argv=None) -> int:
         }
         for p in problems
     }
-    text = report(results, seeds, scale)
-    print(text)
-    if args.out:
-        with open(args.out, "w") as fh:
-            fh.write(text + "\n")
+    _write(report(results, seeds, scale), args.out)
     return 1 if gate(results) else 0
 
 
