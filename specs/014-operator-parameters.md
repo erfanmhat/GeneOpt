@@ -126,6 +126,32 @@ and tests change.
 
 ---
 
+## D. `mutation_rate="auto"`: 1/D on request
+
+### Problem
+A fixed 0.05 doesn't scale with the number of parameters D. For D = 2 it gives 0.1 mutations per
+child, so the search stalls once the population converges: the 2-parameter bowl test stopped one
+grid step from the optimum. For D = 100 it gives five mutations per child, which disrupts good
+individuals.
+
+### Decision (owner, 2026-10-16)
+Keep 0.05 as the default and add **`mutation_rate="auto"`**, which means **1/D**: one mutation
+per child on average, whatever D is (the standard 1/L rule). It is opt-in, not a hidden default.
+
+### Design
+- Signature: `mutation_rate: float | Literal["auto"] = 0.05`.
+- `"auto"` resolves once in the constructor to `1 / len(environment)` and stays fixed for the run.
+  With D = 1 that's 1.0, so every child is mutated.
+- Only the exact string `"auto"` is accepted. Anything else that isn't a real number in [0, 1]
+  (including `None`, `True`, `"Auto"`, `"1/n"`) raises `ValueError` naming the parameter.
+
+### Acceptance criteria
+- [x] `"auto"` gives a measured per-gene mutation frequency of 1/D ± 10% for D = 2 and D = 50.
+- [x] `None`, `True`, `"Auto"` and `"1/n"` raise `ValueError` naming `mutation_rate`.
+- [x] README row and "How a child is made" mention `"auto"` (text below).
+
+---
+
 ## README text (exact)
 
 Parameters table rows:
@@ -133,7 +159,7 @@ Parameters table rows:
 | parameter | default | meaning |
 |---|---|---|
 | `crossover_probability` | `0.9` | chance that two selected parents recombine. If they don't, the children start as copies of the parents. |
-| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. |
+| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. `"auto"` uses 1 / (number of parameters). |
 
 Paragraph under the table, headed **How a child is made**:
 
@@ -145,8 +171,8 @@ Paragraph under the table, headed **How a child is made**:
 > 3. **Mutate** every gene of both children with probability `mutation_rate`.
 >
 > With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
-> 100 parameters gets five. For about one mutation per child instead, use
-> 1 / (number of parameters).
+> 100 parameters gets five. For about one mutation per child whatever the number of parameters,
+> pass `mutation_rate="auto"`, which uses 1 / (number of parameters).
 
 ---
 

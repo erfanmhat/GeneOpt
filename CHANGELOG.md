@@ -14,7 +14,8 @@ The bugs fixed are listed in [specs/README.md](specs/README.md).
 - Genomes are integer value indices, not bit strings. Initial sampling is uniform, mutation is a
   single per-gene probability. The standard operators are used: tournament selection (exactly `k`
   candidates) with elitism, uniform crossover (`crossover_probability`, default 0.9, fair 50/50
-  gene mixing), and random-resetting mutation (`mutation_rate`, default 0.05).
+  gene mixing), and random-resetting mutation (`mutation_rate`, default 0.05; `"auto"` uses 1 / number of
+  parameters).
 - `start_number_of_population` is removed without a replacement: every generation has
   `population_size` individuals.
 - Cache keyed by exact gene indices, persisted as append-only JSONL named by a fingerprint of the

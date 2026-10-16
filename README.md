@@ -139,7 +139,7 @@ if __name__ == "__main__":
 | `population_size` | `100` | individuals per generation |
 | `generations` | `100` | maximum number of generations |
 | `crossover_probability` | `0.9` | chance that two selected parents recombine. If they don't, the children start as copies of the parents. |
-| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. |
+| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. `"auto"` uses 1 / (number of parameters). |
 | `tournament_size` | `3` | candidates per tournament selection |
 | `elitism` | `1` | best distinct genomes copied unchanged into the next generation |
 | `early_stopping_rounds` | `None` | stop after this many generations without improvement |
@@ -163,8 +163,8 @@ Everything after `environment` is keyword-only.
 3. **Mutate** every gene of both children with probability `mutation_rate`.
 
 With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
-100 parameters gets five. For about one mutation per child instead, use
-1 / (number of parameters).
+100 parameters gets five. For about one mutation per child whatever the number of parameters,
+pass `mutation_rate="auto"`, which uses 1 / (number of parameters).
 
 ## Caching
 

@@ -37,7 +37,7 @@ GeneticAlgorithm(
     population_size: int = 100,
     generations: int = 100,
     crossover_probability: float = 0.9,              # p_c of uniform crossover (003, 014)
-    mutation_rate: float = 0.05,                     # per gene, per child (003, 014)
+    mutation_rate: float | Literal["auto"] = 0.05,   # per gene, per child; "auto" = 1/D (003, 014)
     tournament_size: int = 3,
     elitism: int = 1,
     early_stopping_rounds: int | None = None,

@@ -68,7 +68,7 @@ init   = rng.integers(0, sizes, size=(pop, n_params))   # uniform, no bias (E-1 
 - **Mutation: random resetting**, the textbook operator for integer and categorical genes. Each
   gene, with probability `mutation_rate` (one gate, which fixes E-2), takes a uniformly chosen
   *other* value. `mutation_rate` defaults to **0.05**, a plain number with no formula behind it
-  (014 B). 1/n_params gives one mutation per child on average, and is the user's to choose.
+  (014 B). `mutation_rate="auto"` uses 1/n_params, one mutation per child on average (014 D).
 
 > **History (spec 012):** the first 2.0 build used a 1/n_params swap rate, creep steps for
 > ordered numeric parameters and an adaptive mutation rate. The competitor benchmark found

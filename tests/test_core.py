@@ -293,13 +293,13 @@ def test_GC_11_only_cache_dir_is_created(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("n_params", [2, 50])
-@pytest.mark.parametrize("configured", [None, 0.1])
+@pytest.mark.parametrize("configured", [None, 0.1, "auto"])
 def test_E_3_mutation_rate_is_fixed_and_defaults_to_0_05(monkeypatch, n_params, configured):
     # 1.x divided the rate by the raw Hamming distance (rates above 1 near convergence).
-    # 2.0: one constant per-gene rate, 0.05 unless set, whatever the number of parameters.
+    # 2.0: one constant per-gene rate, 0.05 unless set; "auto" is 1 / n_params (spec 014 D).
     import geneopt.core
 
-    expected = 0.05 if configured is None else configured
+    expected = {None: 0.05, "auto": 1 / n_params}.get(configured, configured)
     seen, changed, total_genes = set(), 0, 0
 
     def spy(genomes, rate, sizes, rng):
@@ -320,9 +320,10 @@ def test_E_3_mutation_rate_is_fixed_and_defaults_to_0_05(monkeypatch, n_params, 
     assert changed / total_genes == pytest.approx(expected, rel=0.1)
 
 
-def test_mutation_rate_none_is_rejected():
+@pytest.mark.parametrize("bad", [None, "Auto", "1/n", True])
+def test_mutation_rate_other_than_a_number_or_auto_is_rejected(bad):
     with pytest.raises(ValueError, match="mutation_rate"):
-        GeneticAlgorithm(total, {"x": [1, 2]}, mutation_rate=None)
+        GeneticAlgorithm(total, {"x": [1, 2]}, mutation_rate=bad)
 
 
 # --- crossover: uniform, Syswerda 1989 (spec 014 C) ---------------------------
