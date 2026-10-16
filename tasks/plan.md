@@ -23,7 +23,7 @@ plus a fixed p_s = 0.5.
 
 ## Task list
 
-- [ ] Task 1: Remove `initial_population_size` (014 A)
+- [x] Task 1: Remove `initial_population_size` (014 A)
 - [ ] Task 2: `mutation_rate` default 0.05, `None` rejected (014 B)
 - [ ] Task 3: `crossover_rate` → `crossover_probability`, statistical crossover tests (014 C)
 - [ ] Task 4: README "How a child is made", specs 003/005/007/011, CHANGELOG, regenerate images

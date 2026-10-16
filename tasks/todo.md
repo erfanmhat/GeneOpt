@@ -5,9 +5,9 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 1: Remove `initial_population_size`
 **Description:** Delete the parameter, its validation, `_initial_population_size`, and use `population_size` for generation 0.
 **Acceptance criteria:**
-- [ ] `GeneticAlgorithm(f, env, initial_population_size=10)` raises `TypeError`
-- [ ] Every generation in `history` has exactly `population_size` rows
-- [ ] `test_initial_population_size_applies_to_generation_zero_only` and its validation case removed; README row removed
+- [x] `GeneticAlgorithm(f, env, initial_population_size=10)` raises `TypeError`
+- [x] Every generation in `history` has exactly `population_size` rows
+- [x] `test_initial_population_size_applies_to_generation_zero_only` and its validation case removed; README row removed
 **Verification:** `pytest -q`, lint, mypy
 **Dependencies:** None
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `README.md`

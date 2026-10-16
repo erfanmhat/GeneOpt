@@ -51,14 +51,6 @@ def test_odd_population_size_is_kept():
     assert [len(s) for s in ga.history.scores] == [101, 101, 101]
 
 
-def test_initial_population_size_applies_to_generation_zero_only():
-    ga = GeneticAlgorithm(
-        lambda x: x, {"x": list(range(50))}, population_size=10, initial_population_size=30, generations=3
-    )
-    ga.start()
-    assert [len(s) for s in ga.history.scores] == [30, 10, 10]
-
-
 @pytest.mark.parametrize("seed", range(5))
 def test_E_5_elitism_keeps_best_of_population_monotonic(seed):
     ga = GeneticAlgorithm(
@@ -326,7 +318,7 @@ def test_crossover_children_hold_exactly_the_parents_genes():
     assert ((c1 == p1) | (c1 == p2)).all() and ((c1 + c2) == (p1 + p2)).all()
 
 
-@pytest.mark.parametrize("kwarg", ["adaptive_mutation", "crossover_swap_rate"])
+@pytest.mark.parametrize("kwarg", ["adaptive_mutation", "crossover_swap_rate", "initial_population_size"])
 def test_non_standard_operator_options_are_gone(kwarg):
     with pytest.raises(TypeError, match=kwarg):
         GeneticAlgorithm(total, {"x": [1, 2]}, **{kwarg: 0.5})

@@ -137,7 +137,6 @@ if __name__ == "__main__":
 | `optimizer_name` | `"geneopt"` | names the cache file and the plot directory |
 | `maximize` | `True` | `False` to minimise |
 | `population_size` | `100` | individuals per generation |
-| `initial_population_size` | `population_size` | size of generation 0 only |
 | `generations` | `100` | maximum number of generations |
 | `crossover_rate` | `0.9` | probability that a pair of parents performs uniform crossover (each gene swapped with p = 0.5) |
 | `mutation_rate` | `1/n_params` | per-gene probability of resetting to a random other value; the default gives one mutation per child on average |

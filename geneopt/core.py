@@ -116,7 +116,6 @@ class GeneticAlgorithm:
         optimizer_name: str = "geneopt",
         maximize: bool = True,
         population_size: int = 100,
-        initial_population_size: int | None = None,
         generations: int = 100,
         crossover_rate: float = 0.9,
         mutation_rate: float | None = None,
@@ -142,12 +141,6 @@ class GeneticAlgorithm:
             "None or in [0, 1]",
         )
         _check("population_size", population_size, population_size >= 2, ">= 2")
-        _check(
-            "initial_population_size",
-            initial_population_size,
-            initial_population_size is None or initial_population_size >= 2,
-            ">= 2",
-        )
         _check("tournament_size", tournament_size, tournament_size >= 1, ">= 1")
         _check("elitism", elitism, 0 <= elitism < population_size, "in [0, population_size)")
         _check("generations", generations, generations >= 1, ">= 1")
@@ -179,7 +172,6 @@ class GeneticAlgorithm:
         self._sizes = np.array([len(v) for v in env.values()])
         self._sign = 1.0 if maximize else -1.0
         self._population_size = population_size
-        self._initial_population_size = initial_population_size or population_size
         self._generations = generations
         self._crossover_rate = crossover_rate
         # textbook default: one expected mutation per child (1 / number of genes)
@@ -290,7 +282,7 @@ class GeneticAlgorithm:
         n_evaluations = n_cache_hits = 0
         best_key, best_signed, best_generation, last_improvement = None, -np.inf, 0, 0
         stopped_by: StopReason = "generations"
-        population = rng.integers(0, self._sizes, size=(self._initial_population_size, len(self._names)))
+        population = rng.integers(0, self._sizes, size=(self._population_size, len(self._names)))
 
         for generation in range(self._generations):
             keys = [tuple(int(i) for i in genome) for genome in population]
