@@ -16,9 +16,9 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 2: `mutation_rate` default 0.05
 **Description:** Signature `mutation_rate: float = 0.05`; drop the 1/n formula; `None` fails validation. The bench adapter passes its value explicitly.
 **Acceptance criteria:**
-- [ ] Omitting it gives a measured per-gene mutation frequency of 0.05 ± 10% for 2- and 50-parameter environments
-- [ ] `mutation_rate=None` raises `ValueError` naming the parameter
-- [ ] `test_E_3_*` asserts the configured rate is used unchanged during the run
+- [x] Omitting it gives a measured per-gene mutation frequency of 0.05 ± 10% for 2- and 50-parameter environments
+- [x] `mutation_rate=None` raises `ValueError` naming the parameter
+- [x] `test_E_3_*` asserts the configured rate is used unchanged during the run
 **Verification:** `pytest -q`, lint, mypy
 **Dependencies:** Task 1
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `tests/bench/run.py`

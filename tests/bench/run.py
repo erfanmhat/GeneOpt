@@ -26,6 +26,7 @@ from importlib import metadata
 import numpy as np
 
 POPULATION = 50  # shared by every GA library (fairness rule 3)
+GENEOPT_MUTATION_RATE = 0.05  # disclosed, never tuned per problem (spec 015 rule 6); the library default
 CALL_CAP = 50  # total calls allowed per unique evaluation
 
 
@@ -116,6 +117,7 @@ def run_geneopt(p: Problem, f: Budget, seed: int) -> None:
         env,
         maximize=False,
         population_size=POPULATION,
+        mutation_rate=GENEOPT_MUTATION_RATE,
         # GeneOpt answers repeats from its own cache, so they never reach the call cap; bound it by
         # the same number of proposals the cap allows everyone else (CALL_CAP x N individuals)
         generations=max(1, CALL_CAP * f.n_unique // POPULATION),

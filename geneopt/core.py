@@ -118,7 +118,7 @@ class GeneticAlgorithm:
         population_size: int = 100,
         generations: int = 100,
         crossover_rate: float = 0.9,
-        mutation_rate: float | None = None,
+        mutation_rate: float = 0.05,
         tournament_size: int = 3,
         elitism: int = 1,
         early_stopping_rounds: int | None = None,
@@ -135,10 +135,7 @@ class GeneticAlgorithm:
         env = _check_environment(environment)
         _check("crossover_rate", crossover_rate, 0 <= crossover_rate <= 1, "in [0, 1]")
         _check(
-            "mutation_rate",
-            mutation_rate,
-            mutation_rate is None or 0 <= mutation_rate <= 1,
-            "None or in [0, 1]",
+            "mutation_rate", mutation_rate, mutation_rate is not None and 0 <= mutation_rate <= 1, "in [0, 1]"
         )
         _check("population_size", population_size, population_size >= 2, ">= 2")
         _check("tournament_size", tournament_size, tournament_size >= 1, ">= 1")
@@ -174,8 +171,7 @@ class GeneticAlgorithm:
         self._population_size = population_size
         self._generations = generations
         self._crossover_rate = crossover_rate
-        # textbook default: one expected mutation per child (1 / number of genes)
-        self._mutation_rate = 1.0 / len(env) if mutation_rate is None else mutation_rate
+        self._mutation_rate = mutation_rate
         self._tournament_size = tournament_size
         self._elitism = elitism
         self._early_stopping_rounds = early_stopping_rounds

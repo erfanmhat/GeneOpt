@@ -70,7 +70,13 @@ def test_E_5_elitism_keeps_best_of_population_monotonic(seed):
 def test_finds_bowl_optimum(seed):
     env = {"x": np.linspace(-5, 5, 101), "y": np.linspace(-5, 5, 101)}
     r = GeneticAlgorithm(
-        lambda x, y: x * x + y * y, env, maximize=False, population_size=40, generations=60, seed=seed
+        lambda x, y: x * x + y * y,
+        env,
+        maximize=False,
+        population_size=40,
+        generations=60,
+        mutation_rate=0.5,  # 1 / n_params: about one mutation per child on this 2-parameter problem
+        seed=seed,
     ).start()
     assert r.score < 1e-9 and r.params == {"x": 0.0, "y": 0.0}
 
@@ -286,12 +292,37 @@ def test_GC_11_only_cache_dir_is_created(tmp_path, monkeypatch):
     assert len(list(store.glob("*.jsonl"))) == 1
 
 
-def test_E_3_mutation_rate_is_fixed_and_defaults_to_one_over_n():
+@pytest.mark.parametrize("n_params", [2, 50])
+@pytest.mark.parametrize("configured", [None, 0.1])
+def test_E_3_mutation_rate_is_fixed_and_defaults_to_0_05(monkeypatch, n_params, configured):
     # 1.x divided the rate by the raw Hamming distance (rates above 1 near convergence).
-    # 2.0 uses the textbook rule: a constant per-gene rate, 1/n_params unless set.
-    env = {f"p{i}": list(range(10)) for i in range(4)}
-    assert GeneticAlgorithm(total, env)._mutation_rate == pytest.approx(0.25)
-    assert GeneticAlgorithm(total, env, mutation_rate=0.1)._mutation_rate == 0.1
+    # 2.0: one constant per-gene rate, 0.05 unless set, whatever the number of parameters.
+    import geneopt.core
+
+    expected = 0.05 if configured is None else configured
+    seen, changed, total_genes = set(), 0, 0
+
+    def spy(genomes, rate, sizes, rng):
+        nonlocal changed, total_genes
+        before = genomes.copy()
+        out = mutate(genomes, rate, sizes, rng)
+        seen.add(rate)
+        changed += (out != before).sum()
+        total_genes += before.size
+        return out
+
+    mutate = geneopt.core._mutate
+    monkeypatch.setattr(geneopt.core, "_mutate", spy)
+    env = {f"p{i}": list(range(10)) for i in range(n_params)}
+    kwargs = {} if configured is None else {"mutation_rate": configured}
+    GeneticAlgorithm(total, env, population_size=200, generations=40, **kwargs).start()
+    assert seen == {expected}
+    assert changed / total_genes == pytest.approx(expected, rel=0.1)
+
+
+def test_mutation_rate_none_is_rejected():
+    with pytest.raises(ValueError, match="mutation_rate"):
+        GeneticAlgorithm(total, {"x": [1, 2]}, mutation_rate=None)
 
 
 # --- crossover: uniform (spec 012) ---------------------------------------------
