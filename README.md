@@ -138,8 +138,8 @@ if __name__ == "__main__":
 | `maximize` | `True` | `False` to minimise |
 | `population_size` | `100` | individuals per generation |
 | `generations` | `100` | maximum number of generations |
-| `crossover_rate` | `0.9` | probability that a pair of parents performs uniform crossover (each gene swapped with p = 0.5) |
-| `mutation_rate` | `1/n_params` | per-gene probability of resetting to a random other value; the default gives one mutation per child on average |
+| `crossover_probability` | `0.9` | chance that two selected parents recombine. If they don't, the children start as copies of the parents. |
+| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. |
 | `tournament_size` | `3` | candidates per tournament selection |
 | `elitism` | `1` | best distinct genomes copied unchanged into the next generation |
 | `early_stopping_rounds` | `None` | stop after this many generations without improvement |
@@ -152,6 +152,19 @@ if __name__ == "__main__":
 | `seed` | `0` | random seed; the same seed gives the same run with or without an executor |
 
 Everything after `environment` is keyword-only.
+
+**How a child is made**
+
+1. **Select** two parents, each the winner of a tournament of `tournament_size` random
+   individuals.
+2. **Recombine** with probability `crossover_probability`: for every gene separately, a fair
+   coin decides which parent child 1 takes it from, and child 2 takes it from the other parent.
+   The coin is always fair (50/50) so neither parent is favoured; this isn't a setting.
+3. **Mutate** every gene of both children with probability `mutation_rate`.
+
+With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
+100 parameters gets five. For about one mutation per child instead, use
+1 / (number of parameters).
 
 ## Caching
 

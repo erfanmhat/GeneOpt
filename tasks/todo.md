@@ -39,9 +39,9 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 4: Docs
 **Description:** README rows and "How a child is made" from 014 verbatim; specs 003, 005, 007, 011 and CHANGELOG updated; README images regenerated from the quickstart.
 **Acceptance criteria:**
-- [ ] README matches 014 § README text; README-embed and image tests pass
-- [ ] Grep check from the plan checkpoint is clean
-- [ ] 014 status → implemented, acceptance boxes ticked; specs/README map updated
+- [x] README matches 014 § README text; README-embed and image tests pass
+- [x] Grep check from the plan checkpoint is clean
+- [x] 014 status → implemented, acceptance boxes ticked; specs/README map updated
 **Verification:** `pytest -q`, lint, grep
 **Dependencies:** Task 3
 **Files:** `README.md`, `CHANGELOG.md`, `specs/003*.md`, `specs/005*.md`, `specs/007*.md`, `specs/011*.md`, `specs/014*.md`, `specs/README.md`, `docs/images/*.png`

@@ -95,7 +95,7 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 
 | Item | Where | Notes |
 |---|---|---|
-| Operator parameter cleanup | [014](014-operator-parameters.md) | Next stage. Lands before 2.0.0 is published |
+| Operator parameter cleanup | [014](014-operator-parameters.md) | Done. 015 runs next, at the new defaults |
 | Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Next stage. Replaces the 007 problems, which favoured separable-problem specialists. Prototype: GeneOpt 3rd of 7 |
 | Benchmark figures | [016](016-benchmark-plots.md) | Approved. Built after 015 |
 | Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | To be judged on the 015 suite, not the old Rastrigin/Holder problems |

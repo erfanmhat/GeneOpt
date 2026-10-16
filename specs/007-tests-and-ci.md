@@ -147,7 +147,7 @@ Seeds: 30 · budget scale: 1 · Python 3.12.14 · GeneOpt 2.0.0, pygad 3.8.1, de
 **Reading the results:**
 - **Gate passes.** GeneOpt beats random search on all three problems.
 - **GeneOpt uses the standard operators** (003): uniform crossover and random-resetting
-  mutation at 1/n_params, with tournament selection and elitism. The other six rows are identical
+  mutation at 1/n_params (the default at the time; 014 made it 0.05), with tournament selection and elitism. The other six rows are identical
   to the first run (same seeds and versions), so the comparison is like-for-like.
 - **Categorical:** GeneOpt ties for 1st with DEAP, pymoo and Optuna, at a 100% hit rate.
 - **Rastrigin: 3rd** (median 3.59), behind pymoo (0) and DEAP (0.64). That's 43% better than the

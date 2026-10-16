@@ -41,11 +41,11 @@ run that seems to work. The library is small, and keeping the shims would roughl
 
 | 1.x parameter | 2.0.0 |
 |---|---|
-| `start_number_of_population` | `initial_population_size` (optional, defaults to `population_size`) |
+| `start_number_of_population` | *deleted; use `population_size`* (014) |
 | `number_of_population` | `population_size` |
 | `number_of_generations` | `generations` |
 | `comparison_type=GeneticAlgorithmComparisonType.maximize/minimize` | `maximize=True/False` |
-| `r_cross` | `crossover_rate` |
+| `r_cross` | `crossover_probability` |
 | `tournament_selection_number` | `tournament_size` |
 | `cache_type=GeneticAlgorithmCacheType.Ram` | `cache_dir=None` |
 | `cache_type=GeneticAlgorithmCacheType.HardDisk` | `cache_dir="./cache"` |

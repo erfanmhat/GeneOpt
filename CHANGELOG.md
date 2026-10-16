@@ -13,8 +13,10 @@ The bugs fixed are listed in [specs/README.md](specs/README.md).
 - Package renamed to `geneopt`, with a keyword-only API. `start()` returns a `Result`.
 - Genomes are integer value indices, not bit strings. Initial sampling is uniform, mutation is a
   single per-gene probability. The standard operators are used: tournament selection (exactly `k`
-  candidates) with elitism, uniform crossover, and random-resetting mutation at 1/n_params by
-  default.
+  candidates) with elitism, uniform crossover (`crossover_probability`, default 0.9, fair 50/50
+  gene mixing), and random-resetting mutation (`mutation_rate`, default 0.05).
+- `start_number_of_population` is removed without a replacement: every generation has
+  `population_size` individuals.
 - Cache keyed by exact gene indices, persisted as append-only JSONL named by a fingerprint of the
   environment and objective code. Stale or wrong cache hits are no longer possible.
 - One evaluation loop: per-generation dedupe, any `concurrent.futures` executor, `on_error` policy.

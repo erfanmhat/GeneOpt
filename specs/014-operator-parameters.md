@@ -1,6 +1,6 @@
 # 014 — Operator Parameters: Explicit and Standard
 
-**Status:** proposed · **Severity:** 🟠 high (API + correctness of documentation) ·
+**Status:** implemented (2026-10-16) · **Severity:** 🟠 high (API + correctness of documentation) ·
 **Depends on:** 003, 005 · **Pairs with:** 015 (benchmarks) · **Release:** before 2.0.0 is published
 
 Three changes requested by the owner (2026-10-16), each a separate section with its own
@@ -29,10 +29,10 @@ It also costs more than it gives:
   row becomes `start_number_of_population` → *deleted; use `population_size`*.
 
 ### Acceptance criteria
-- [ ] `GeneticAlgorithm(f, env, initial_population_size=10)` raises `TypeError`.
-- [ ] Every generation in `history` has exactly `population_size` rows (existing H-1 test, now
+- [x] `GeneticAlgorithm(f, env, initial_population_size=10)` raises `TypeError`.
+- [x] Every generation in `history` has exactly `population_size` rows (existing H-1 test, now
       without exceptions).
-- [ ] No mention of `initial_population_size` remains in `geneopt/`, README, CHANGELOG or specs,
+- [x] No mention of `initial_population_size` remains in `geneopt/`, README, CHANGELOG or specs,
       except 011's removal row and this spec.
 
 ---
@@ -60,11 +60,11 @@ earlier "required, no default" decision.
 - The benchmark adapter (015) passes its value explicitly and discloses it.
 
 ### Acceptance criteria
-- [ ] Omitting `mutation_rate` gives a measured per-gene mutation frequency of 0.05 ± 10%, for
+- [x] Omitting `mutation_rate` gives a measured per-gene mutation frequency of 0.05 ± 10%, for
       both a 2-parameter and a 50-parameter environment.
-- [ ] `mutation_rate=None` raises `ValueError` naming the parameter, so no implicit formula is left.
-- [ ] No mention of `1/n_params` as a mutation default remains in `geneopt/`, README or spec 003.
-- [ ] `test_E_3_*` asserts that the configured rate is used unchanged during the run.
+- [x] `mutation_rate=None` raises `ValueError` naming the parameter, so no implicit formula is left.
+- [x] No mention of `1/n_params` as a mutation default remains in `geneopt/`, README or spec 003.
+- [x] `test_E_3_*` asserts that the configured rate is used unchanged during the run.
 
 ---
 
@@ -114,13 +114,13 @@ and tests change.
 `crossover_probability` keeps its default of **0.9**. It isn't required.
 
 ### Acceptance criteria
-- [ ] `crossover_rate` raises `TypeError`; `crossover_probability` is accepted and validated.
-- [ ] A statistical test with p_c = 1 and parents A = 0…, B = 1…: each child gene comes from A with
+- [x] `crossover_rate` raises `TypeError`; `crossover_probability` is accepted and validated.
+- [x] A statistical test with p_c = 1 and parents A = 0…, B = 1…: each child gene comes from A with
       frequency 0.5 ± 0.02, and child 2 is always the complement of child 1.
-- [ ] A statistical test with long genomes: the fraction of pairs that recombine is p_c ± 0.03, for
+- [x] A statistical test with long genomes: the fraction of pairs that recombine is p_c ± 0.03, for
       p_c ∈ {0.3, 0.9}.
-- [ ] With p_c = 0, children equal their parents before mutation.
-- [ ] The README rows below replace the current `crossover_rate` and `mutation_rate` rows word
+- [x] With p_c = 0, children equal their parents before mutation.
+- [x] The README rows below replace the current `crossover_rate` and `mutation_rate` rows word
       for word, and the `initial_population_size` row is deleted (A). Any wording that mixes p_c
       and p_s (grep for "pair of parents performs") is gone.
 
@@ -145,7 +145,8 @@ Paragraph under the table, headed **How a child is made**:
 > 3. **Mutate** every gene of both children with probability `mutation_rate`.
 >
 > With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
-> 100 parameters gets five. For many parameters, try 1 / (number of parameters).
+> 100 parameters gets five. For about one mutation per child instead, use
+> 1 / (number of parameters).
 
 ---
 

@@ -26,11 +26,11 @@ plus a fixed p_s = 0.5.
 - [x] Task 1: Remove `initial_population_size` (014 A)
 - [x] Task 2: `mutation_rate` default 0.05, `None` rejected (014 B)
 - [x] Task 3: `crossover_rate` → `crossover_probability`, statistical crossover tests (014 C)
-- [ ] Task 4: README "How a child is made", specs 003/005/007/011, CHANGELOG, regenerate images
+- [x] Task 4: README "How a child is made", specs 003/005/007/011, CHANGELOG, regenerate images
 
 ### Checkpoint
-- [ ] `pytest -q` (all markers), `ruff check . && ruff format --check . && mypy`, coverage gate
-- [ ] 014's acceptance boxes ticked; grep shows no `initial_population_size`, `crossover_rate`,
+- [x] `pytest -q` (all markers), `ruff check . && ruff format --check . && mypy`, coverage gate
+- [x] 014's acceptance boxes ticked; grep shows no `initial_population_size`, `crossover_rate`,
       `1/n_params`-as-default or "pair of parents performs" outside 011's removal rows and 012/014
 - [ ] Pushed; CI green on PR #1
 

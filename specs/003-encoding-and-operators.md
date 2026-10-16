@@ -59,14 +59,16 @@ decode = lambda g: {k: env[k][i] for k, i in zip(keys, g)}
 init   = rng.integers(0, sizes, size=(pop, n_params))   # uniform, no bias (E-1 gone)
 ```
 
-- **Crossover: uniform crossover**, the textbook operator for gene vectors. A pair of parents
-  crosses with probability `crossover_rate`; a crossing pair exchanges each gene with p = 1/2.
+- **Crossover: uniform crossover** (Syswerda 1989), the textbook operator for gene vectors. A
+  pair of parents recombines with probability p_c = `crossover_probability` (default 0.9);
+  otherwise the children are copies. In a recombining pair a fair coin (p_s = 1/2, fixed) decides
+  for each gene which parent child 1 takes it from, and child 2 takes the other (014 C).
   It doesn't depend on parameter order, which matters because parameters are named, not
   positioned. Vectorised as a boolean mask.
 - **Mutation: random resetting**, the textbook operator for integer and categorical genes. Each
   gene, with probability `mutation_rate` (one gate, which fixes E-2), takes a uniformly chosen
-  *other* value. `mutation_rate` defaults to **1/n_params**, so each child gets one mutation on
-  average (the standard 1/L rule).
+  *other* value. `mutation_rate` defaults to **0.05**, a plain number with no formula behind it
+  (014 B). 1/n_params gives one mutation per child on average, and is the user's to choose.
 
 > **History (spec 012):** the first 2.0 build used a 1/n_params swap rate, creep steps for
 > ordered numeric parameters and an adaptive mutation rate. The competitor benchmark found
@@ -140,8 +142,8 @@ releases is investigated, but it doesn't block a release on its own. Model-based
 - [ ] 8,000 random initial genes over 5 values: each value 1,600 ± 150.
 - [x] Measured per-gene mutation frequency ≈ `mutation_rate` (±10%). A mutated gene always takes a
       different, in-range value.
-- [x] `mutation_rate` defaults to 1/n_params and doesn't change during a run.
-- [x] Uniform crossover swaps about 50% of the genes of crossing pairs, and none at `crossover_rate=0`.
+- [x] `mutation_rate` defaults to 0.05 (014; first 2.0 build: 1/n_params) and doesn't change during a run.
+- [x] Uniform crossover swaps about 50% of the genes of crossing pairs, and none at `crossover_probability=0`.
 - [ ] Tournament with `k > pop` logs nothing and returns a valid index.
 - [ ] With `elitism ≥ 1`, best-of-population is monotonic across generations.
 - [ ] `early_stopping_rounds=3` stops exactly 3 generations after the last improvement.

@@ -35,10 +35,9 @@ GeneticAlgorithm(
     optimizer_name: str = "geneopt",
     maximize: bool = True,                           # replaces comparison_type enum
     population_size: int = 100,
-    initial_population_size: int | None = None,      # None → population_size
     generations: int = 100,
-    crossover_rate: float = 0.9,
-    mutation_rate: float | None = None,             # None → 1/n_params (003)
+    crossover_probability: float = 0.9,              # p_c of uniform crossover (003, 014)
+    mutation_rate: float = 0.05,                     # per gene, per child (003, 014)
     tournament_size: int = 3,
     elitism: int = 1,
     early_stopping_rounds: int | None = None,
@@ -65,7 +64,7 @@ All checks raise `ValueError`/`TypeError` with the parameter name and the offend
 | Check | Rule |
 |---|---|
 | environment | non-empty mapping. Every value is a non-empty sequence (not a str). Keys are `str.isidentifier()` because they're passed as `**kwargs` |
-| rates | `0 ≤ crossover_rate, mutation_rate ≤ 1` |
+| rates | `0 ≤ crossover_probability, mutation_rate ≤ 1` |
 | sizes | `population_size ≥ 2`, `tournament_size ≥ 1`, `0 ≤ elitism < population_size` |
 | generations | `≥ 1` |
 | objective | `callable`. Optionally, `inspect.signature(fn).bind(**first_params)` is tried once, so a misspelled parameter name fails **before** generation 0 |
