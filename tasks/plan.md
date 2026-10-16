@@ -1,41 +1,48 @@
-# Implementation Plan: spec 014 — operator parameters
+# Implementation Plan: spec 015 — fair benchmark suite
 
-(Earlier plans for specs 011, 007 and 012 are complete; see git history of this file.)
+(Earlier plans for specs 011, 007, 012 and 014 are complete; see git history of this file.)
 
 ## Overview
 
-Spec 014 is the only pending spec with no unmet prerequisite (015 measures 014's defaults, and 016
-plots 015's results). It makes three changes to the public signature, inside 2.0.0, with no shims:
-A removes `initial_population_size`; B sets `mutation_rate` to a fixed default of 0.05; C renames
-`crossover_rate` → `crossover_probability` (default 0.9) and documents uniform crossover as p_c
-plus a fixed p_s = 0.5.
+Add COCO bbob-mixint and IOHprofiler PBO to the benchmark harness. Every run records an
+anytime trace of precision. The report scores precision against targets, checks for head
+starts, ranks the optimisers and applies the new gate. CI shards the work, and one local run at
+CI scope produces the first committed report.
 
 ## Architecture decisions
 
-- No operator logic changes. `_crossover` is already Syswerda's uniform crossover; only its
-  parameter name, docstring and tests change (014 C).
-- Removed or renamed keywords raise Python's own `TypeError` (keyword-only signature, 011 policy).
-- `mutation_rate=None` raises `ValueError` through the existing `_check`, so no formula survives.
-- The README text is pasted from 014 § *README text (exact)*, not rewritten.
-- The legacy benchmark is **not** re-run: its problems are retired by 015, which runs once after
-  014 lands. The README images come from the quickstart, whose run changes with the new defaults,
-  so they're regenerated in Task 4.
+- **New module `tests/bench/suites.py`** builds problems from `cocoex` and `ioh` and computes
+  precision. `run.py` keeps the adapters, the Budget wrapper and the CLI. It grows a `--suite`
+  switch, with `legacy` the old three problems.
+- **One record per run** (JSON line): suite, function, D, instance, optimiser label, seed, the
+  GeneOpt config, unique evaluations, seconds, error, raw best values, and the trace as
+  `(evaluation, best raw value)` at each improvement. Precision is computed at **report time**,
+  because PBO references (`max(stated, best observed)`) need all runs. Shards therefore just
+  write records, and `--report-only DIR` merges them.
+- **The GeneOpt configuration is a literal table** keyed by (suite, D): main row 1/D plus
+  sensitivity rows 0.5/D and 2/D, with every operator parameter written out. Labels are
+  `geneopt[mr=1/D]` etc.
+- **Seeds:** the instance id is the seed (one run per optimiser and problem, as COCO does).
+- **Tests needing `cocoex`/`ioh`** use `pytest.importorskip`. They run in `bench.yml`, which
+  installs the bench requirements. Core CI stays numpy-only, and pure scoring tests run there.
+- Figures are 016's. `cocopp` isn't added here.
 
 ## Task list
 
-- [x] Task 1: Remove `initial_population_size` (014 A)
-- [x] Task 2: `mutation_rate` default 0.05, `None` rejected (014 B)
-- [x] Task 3: `crossover_rate` → `crossover_probability`, statistical crossover tests (014 C)
-- [x] Task 4: README "How a child is made", specs 003/005/007/011, CHANGELOG, regenerate images
+- [ ] Task 1: `suites.py`: problems, cardinalities, f_opt from COCO logs, IOH internal values
+- [ ] Task 2: per-run records with anytime traces, GeneOpt config table, vectorised Nevergrad
+- [ ] Task 3: scoring and report: targets, references, head-start check, ranks, Wilcoxon, ECDF area, gate
+- [ ] Task 4: CLI (`--suite/--dims/--instances/--functions/--out-dir/--report-only`), sharded `bench.yml`
+- [ ] Task 5: local run at CI scope, committed dated report; specs 007/013/015/README updated
 
 ### Checkpoint
-- [x] `pytest -q` (all markers), `ruff check . && ruff format --check . && mypy`, coverage gate
-- [x] 014's acceptance boxes ticked; grep shows no `initial_population_size`, `crossover_rate`,
-      `1/n_params`-as-default or "pair of parents performs" outside 011's removal rows and 012/014
+- [ ] `pytest -q` (core env, and bench env with `--bench`), ruff, mypy
+- [ ] Spec 015 acceptance boxes ticked, or explained where the run says otherwise
 - [ ] Pushed; CI green on PR #1
 
 ## Risks
 | Risk | Mitigation |
 |---|---|
-| Statistical tests flaky | fixed seeds, tolerances from 014 (±0.02, ±0.03) with large samples |
-| Seeded test expectations depend on the old 1/n default | update them to the new default, never loosen asserts |
+| Local CI-scope run is long (Optuna ≈ 9 CPU-h on PBO) | 12 processes; run in the background; per-run records survive interruption |
+| A competitor crashes on a new suite | recorded as `error` in its record, reported, never aborts the run |
+| The gate fails | it's a finding: reported as is, then I stop and ask before changing anything |

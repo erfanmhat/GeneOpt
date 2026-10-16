@@ -88,6 +88,31 @@ binary problems, where each gene has 2 values:
   transformed instances aren't comparable. Use the IOH `Analyzer` logger and IOHanalyzer-style
   fixed-budget and fixed-target summaries.
 
+### Scoring decisions (found while planning the build, 2026-10-16)
+- **bbob-mixint precision** is f − f_opt. f_opt comes from the header of COCO's own `.dat` log
+  (`best noise-free fitness - Fopt (1.000000000000e+02)`), so the official logs stay usable with
+  `cocopp`, and our numbers come from the same source.
+- **PBO precision** uses IOH's *internal* (untransformed) value, `problem.state.current_internal`.
+  That's the quantity IOH's logger records as raw y, so it's comparable across instances. The
+  optimisers still see the transformed value, which is the point of instances. IOH's Analyzer
+  logger also writes its logs, for IOHanalyzer.
+  - Precision is the relative gap `(ref − y) / |ref|`, with targets {0.5, 0.2, 0.1, 0.05, 0.02,
+    0.01, 0}.
+- **Reference values: `ref = max(stated optimum, best value any optimiser found)`** on that
+  problem. IOH states no optimum for F18 (LABS) and F25 (NK), where `optimum.y` is `inf`, and its
+  stated F24 optimum at n = 64 is wrong: 8.75 for all-ones, while all-zeros scores 10.35. The
+  report lists every problem whose reference came from observed values instead of a proof.
+- **The head-start check flags a run whose best within its first 50 evaluations already reaches
+  the 1e−2 target.** That's the target the figures (016) and the success rates use. The hardest
+  target would almost never flag anything.
+- **Nevergrad gets a vectorised parametrisation:** one `ng.p.Choice(values, repetitions=n)` for
+  categorical problems and one integer-cast `ng.p.Array` for ordered ones, instead of a Tuple of
+  n parameters. The search space is the same. On PBO n = 64 the Tuple form took more than 10 min
+  for 500 evaluations, and the vectorised form took 3.2 s for 2,000.
+- **Measured cost:** Optuna TPE on PBO n = 64 takes 474 s per run at 6,400 trials, growing
+  roughly quadratically (53 s at 2,000). CI therefore shards by optimiser × suite × instance.
+- **Figures** (ECDF, profiles, Pareto) belong to 016. This build writes the data they need.
+
 ### Optional later: C. real categorical problems
 Tabular hyperparameter benchmarks (for example YAHPO Gym or HPOBench lookup tables) are realistic
 mixed categorical spaces. They're out of scope for the first version and listed here so nobody
@@ -170,8 +195,9 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
   variables. At full size (24 functions × 2 dimensions × 15 instances, plus PBO) a single
   machine needs many hours.
 - **CI (`bench.yml`, opt-in):** bbob-mixint D = 10, instances 1–5, budget 100 · D, plus PBO
-  n = 64, instances 1–5. All seven optimisers run, sharded across a job matrix (one job per
-  optimiser) so no job exceeds GitHub's 6-hour limit.
+  n = 64, instances 1–5. All seven optimisers run, sharded across a job matrix of optimiser ×
+  suite × instance (70 jobs; the slowest, Optuna on PBO, is about 13 runs × 8 min on 4 cores).
+  A final job merges the shards into one report.
 - **Full run:** locally or on a larger runner, with results committed as a dated report.
 
 ## Gate (replaces 003's)
@@ -195,7 +221,7 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
 - The report starts with a configuration section: the exact GeneOpt values per problem, the
   cardinalities read from each suite, and the library versions.
 - `tests/bench/requirements.txt` adds `coco-experiment` and `ioh` (pinned) and `scipy` (for the
-  statistical tests).
+  statistical tests). `cocopp` comes with 016.
 
 ## Acceptance criteria
 - [ ] `python tests/bench/run.py --suite mixint --dims 10 --instances 1-5` runs all seven
@@ -207,5 +233,5 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
       reported alongside.
 - [ ] The report lists every GeneOpt parameter value for every (suite, D), and they match
       *Values per problem*. No GeneOpt run depends on a library default.
-- [ ] `bench.yml` shards by optimiser, and each shard finishes within GitHub's limits.
+- [ ] `bench.yml` shards by optimiser × suite × instance, and each shard finishes within GitHub's limits.
 - [ ] Spec 007's benchmark section points here. The legacy results stay as history only.
