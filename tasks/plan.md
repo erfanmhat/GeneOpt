@@ -29,7 +29,7 @@ CI scope produces the first committed report.
 
 ## Task list
 
-- [ ] Task 1: `suites.py`: problems, cardinalities, f_opt from COCO logs, IOH internal values
+- [x] Task 1: `suites.py`: problems, cardinalities, f_opt from COCO logs, IOH internal values
 - [ ] Task 2: per-run records with anytime traces, GeneOpt config table, vectorised Nevergrad
 - [ ] Task 3: scoring and report: targets, references, head-start check, ranks, Wilcoxon, ECDF area, gate
 - [ ] Task 4: CLI (`--suite/--dims/--instances/--functions/--out-dir/--report-only`), sharded `bench.yml`

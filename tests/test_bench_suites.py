@@ -1,0 +1,71 @@
+"""Suite problems for the fair benchmark (spec 015). Needs the bench requirements (cocoex, ioh)."""
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+pytest.importorskip("cocoex")
+pytest.importorskip("ioh")
+sys.path.insert(0, str(Path(__file__).resolve().parent / "bench"))
+import suites  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "dim, sizes",
+    [
+        (10, (2, 2, 4, 4, 8, 8, 16, 16, 256, 256)),
+        (20, (2,) * 4 + (4,) * 4 + (8,) * 4 + (16,) * 4 + (256,) * 4),
+    ],
+)
+def test_mixint_cardinalities_match_spec_015(tmp_path, dim, sizes):
+    p = suites.mixint(1, dim, 1, tmp_path)
+    assert p.sizes == sizes
+    assert p.finish() is None  # nothing evaluated, so COCO wrote no log to read f_opt from
+
+
+def test_mixint_f_opt_comes_from_cocos_own_log(tmp_path):
+    p = suites.mixint(15, 10, 1, tmp_path)
+    rng = np.random.default_rng(0)
+    values = [p.objective(tuple(int(rng.integers(s)) for s in p.sizes)) for _ in range(20)]
+    f_opt = p.finish()
+    assert values == p.scored  # scored in evaluation order, as the optimiser saw them
+    assert all(v - f_opt >= 0 for v in values)
+    dat = next(tmp_path.rglob("*.dat")).read_text().splitlines()
+    first = dat[1].split()  # evaluations, g-evals, f - f_opt, measured f, ...
+    assert float(first[3]) - float(first[2]) == pytest.approx(f_opt)
+
+
+def test_mixint_runs_log_to_separate_folders(tmp_path):
+    for inst in (1, 2):
+        p = suites.mixint(1, 10, inst, tmp_path)
+        p.objective((0,) * 10)
+        p.finish()
+    assert len(list(tmp_path.rglob("*.info"))) == 2
+    assert not Path("exdata").exists() or not any(Path("exdata").iterdir())
+
+
+def test_pbo_scores_untransformed_values_and_minimises_transformed_ones(tmp_path):
+    import ioh
+
+    p = suites.pbo(19, 64, 2, tmp_path)
+    x = tuple(int(b) for b in np.random.default_rng(1).integers(0, 2, 64))
+    seen = p.objective(x)
+    q = ioh.get_problem(19, instance=2, dimension=64, problem_class=ioh.ProblemClass.PBO)
+    assert seen == -q(list(x))  # the optimiser minimises the transformed value
+    assert p.scored == [q.state.current_internal.y]
+    assert p.maximize and p.sizes == (2,) * 64
+    assert p.finish() == 64.0  # Ising ring: stated optimum, from instance 1
+
+
+@pytest.mark.parametrize("fid", [18, 25])
+def test_pbo_unknown_optimum_is_none(tmp_path, fid):
+    assert suites.pbo(fid, 64, 1, tmp_path).finish() is None
+
+
+def test_targets():
+    assert len(suites.MIXINT_TARGETS) == 51
+    assert suites.MIXINT_TARGETS[0] == pytest.approx(100) and suites.MIXINT_TARGETS[-1] == pytest.approx(1e-8)
+    assert 1e-2 in suites.PBO_TARGETS and suites.PBO_TARGETS[-1] == 0
+    assert any(t == pytest.approx(1e-2) for t in suites.MIXINT_TARGETS)

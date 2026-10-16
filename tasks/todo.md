@@ -5,9 +5,9 @@ Tests: `python -m pytest -q` (+ `--bench` in the bench env) · Lint: `ruff check
 ## Task 1: Suite problems
 **Description:** `tests/bench/suites.py` builds a problem for (suite, function, D, instance). bbob-mixint: integer variables as-is, continuous ones on a 256-value grid, COCO observer logging under the output dir, f_opt read from the `.dat` header. PBO: the optimiser sees the transformed value (minimised), and the internal value is recorded per evaluation. The stated optimum is read from instance 1, with `inf` meaning unknown.
 **Acceptance criteria:**
-- [ ] Cardinalities for D = 10 and 20 match spec 015's table
-- [ ] mixint: f − f_opt ≥ 0 for random points; f_opt parsed from the log equals `measured − (f − f_opt)` in the same log
-- [ ] PBO: recorded internal value equals `state.current_internal.y`; F18/F25 give unknown optimum
+- [x] Cardinalities for D = 10 and 20 match spec 015's table
+- [x] mixint: f − f_opt ≥ 0 for random points; f_opt parsed from the log equals `measured − (f − f_opt)` in the same log
+- [x] PBO: recorded internal value equals `state.current_internal.y`; F18/F25 give unknown optimum
 **Verification:** `pytest tests/test_bench_suites.py` in the bench env
 **Dependencies:** None
 **Files:** `tests/bench/suites.py`, `tests/test_bench_suites.py`, `tests/bench/requirements.txt`
