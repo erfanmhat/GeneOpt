@@ -1,43 +1,48 @@
-# Spec 012 — Task List
+# Spec 014 — Task List
 
 Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && mypy`
 
-## Task 1: `crossover_swap_rate` parameter, `_crossover` extracted
-**Description:** Move crossover out of `_next_generation` into `_crossover(p1, p2, swap_rate, crossover_rate, rng)`. Add `crossover_swap_rate: float | None = None` to `GeneticAlgorithm`. `None` means 1/n_params, which is today's behaviour. Validate the range `[0, 1]`.
+## Task 1: Remove `initial_population_size`
+**Description:** Delete the parameter, its validation, `_initial_population_size`, and use `population_size` for generation 0.
 **Acceptance criteria:**
-- [x] With `crossover_swap_rate=None`, a seeded run is identical to an explicit `1/n_params` and to the pre-change code (same Result and history)
-- [x] `_crossover` swaps genes at the configured rate (measured within ±10%), never swaps when `crossover_rate=0`, and children always contain exactly the parents' genes
-- [x] Out-of-range values raise `ValueError` naming `crossover_swap_rate`
+- [ ] `GeneticAlgorithm(f, env, initial_population_size=10)` raises `TypeError`
+- [ ] Every generation in `history` has exactly `population_size` rows
+- [ ] `test_initial_population_size_applies_to_generation_zero_only` and its validation case removed; README row removed
 **Verification:** `pytest -q`, lint, mypy
 **Dependencies:** None
+**Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `README.md`
+**Scope:** S
+
+## Task 2: `mutation_rate` default 0.05
+**Description:** Signature `mutation_rate: float = 0.05`; drop the 1/n formula; `None` fails validation. The bench adapter passes its value explicitly.
+**Acceptance criteria:**
+- [ ] Omitting it gives a measured per-gene mutation frequency of 0.05 ± 10% for 2- and 50-parameter environments
+- [ ] `mutation_rate=None` raises `ValueError` naming the parameter
+- [ ] `test_E_3_*` asserts the configured rate is used unchanged during the run
+**Verification:** `pytest -q`, lint, mypy
+**Dependencies:** Task 1
+**Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `tests/bench/run.py`
+**Scope:** S
+
+## Task 3: `crossover_probability`
+**Description:** Rename `crossover_rate` → `crossover_probability` (default 0.9) in the constructor and `_crossover`; docstring uses 014 C steps 1–3.
+**Acceptance criteria:**
+- [ ] `crossover_rate=` raises `TypeError`; `crossover_probability` validated in [0, 1]
+- [ ] p_c = 1, parents all-0 / all-1: each child gene from A with frequency 0.5 ± 0.02; child 2 is always the complement of child 1
+- [ ] Long genomes: fraction of recombining pairs = p_c ± 0.03 for p_c ∈ {0.3, 0.9}
+- [ ] p_c = 0: children equal parents
+**Verification:** `pytest -q`, lint, mypy
+**Dependencies:** Task 2
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`
 **Scope:** S
 
-## Task 2: Measure swap rates
-**Description:** Add `--geneopt-swap-rate` (repeatable) to `tests/bench/run.py`, so GeneOpt can run as several variants (`geneopt@1/n`, `geneopt@0.2`, `geneopt@0.5`). Run 30 seeds on all three problems and record the table in spec 012.
+## Task 4: Docs
+**Description:** README rows and "How a child is made" from 014 verbatim; specs 003, 005, 007, 011 and CHANGELOG updated; README images regenerated from the quickstart.
 **Acceptance criteria:**
-- [x] Table for 1/n, 0.2 and 0.5 (30 seeds, all problems) recorded in spec 012
-- [x] Variant parsing unit-tested in the core suite
-**Dependencies:** 1
-**Files:** `tests/bench/run.py`, `tests/test_bench.py`, `specs/012-crossover-mixing.md`
-**Scope:** S
-
-## Task 3 (replaced): standard operators
-**Decision (user, 2026-10-16):** replace mutation, selection and crossover with the most standard approach.
-**Description:** Crossover becomes uniform: each gene of a crossing pair swaps with p = 0.5, and pairs cross with `crossover_rate`. Mutation becomes random resetting: each gene, with p = `mutation_rate`, gets a uniformly chosen *other* value. `mutation_rate` defaults to `None` = 1/n_params. Selection stays as tournament (k = 3) + elitism (1), which is already standard. Remove `adaptive_mutation`, `crossover_swap_rate`, creep (`CREEP_SIGMA`, `_is_ordered_numeric`), `MAX_MUTATION_RATE` and `_mutation_rate`.
-**Acceptance criteria:**
-- [x] `_crossover` swaps about 50% of the genes of crossing pairs, and none when `crossover_rate=0`
-- [x] `_mutate` changes each gene with probability `mutation_rate` (±10%), always to a different value, never outside range
-- [x] Default `mutation_rate` is 1/n_params. Removed parameters raise `TypeError`. Ledger tests E-2/E-3 updated to the new rule
-- [x] Full suite, lint and mypy green. Gate (beats random search) still passes on a quick check
-**Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`, `tests/bench/run.py`, `tests/test_bench.py`
-**Scope:** M
-
-## Task 4: Benchmark and docs
-**Description:** Full 30-seed benchmark with all seven optimisers. Replace the results in spec 007, close spec 012 with the outcome, and update spec 003 (operators), spec 005 (signature), spec 011 (`adaptive_mutation` never shipped, so there's no 1.x mapping), the README parameter table and the CHANGELOG.
-**Acceptance criteria:**
-- [x] Gate passes. **If not → stop and report**
-- [x] Every Markdown file that mentions the old operators or removed parameters is updated (grep-checked)
-- [x] Full suite, lint, CI green on PR #1
-**Dependencies:** 3
+- [ ] README matches 014 § README text; README-embed and image tests pass
+- [ ] Grep check from the plan checkpoint is clean
+- [ ] 014 status → implemented, acceptance boxes ticked; specs/README map updated
+**Verification:** `pytest -q`, lint, grep
+**Dependencies:** Task 3
+**Files:** `README.md`, `CHANGELOG.md`, `specs/003*.md`, `specs/005*.md`, `specs/007*.md`, `specs/011*.md`, `specs/014*.md`, `specs/README.md`, `docs/images/*.png`
 **Scope:** M

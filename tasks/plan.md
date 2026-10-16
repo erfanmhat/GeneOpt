@@ -1,39 +1,41 @@
-# Implementation Plan: spec 012 — crossover mixing
+# Implementation Plan: spec 014 — operator parameters
 
-(Earlier plans for specs 011 and 007 are complete; see git history of this file.)
+(Earlier plans for specs 011, 007 and 012 are complete; see git history of this file.)
 
 ## Overview
 
-The 007 benchmark put GeneOpt 3rd on 10-D Rastrigin. The suspected cause is that crossover swaps
-each gene with p = 1/n_params, so two parents exchange about one gene per mating. Spec 012 says
-to **measure first, then change the default**.
+Spec 014 is the only pending spec with no unmet prerequisite (015 measures 014's defaults, and 016
+plots 015's results). It makes three changes to the public signature, inside 2.0.0, with no shims:
+A removes `initial_population_size`; B sets `mutation_rate` to a fixed default of 0.05; C renames
+`crossover_rate` → `crossover_probability` (default 0.9) and documents uniform crossover as p_c
+plus a fixed p_s = 0.5.
 
 ## Architecture decisions
 
-- Crossover moves into a pure function, `_crossover(p1, p2, swap_rate, crossover_rate, rng)`,
-  like `_mutate`, so its mixing rate can be tested directly.
-- New constructor parameter `crossover_swap_rate: float | None`. `None` means 1/n_params, which is
-  exactly today's behaviour, so Task 1 changes no runs.
-- The benchmark harness gets `--geneopt-swap-rate` so rates can be compared without editing code.
+- No operator logic changes. `_crossover` is already Syswerda's uniform crossover; only its
+  parameter name, docstring and tests change (014 C).
+- Removed or renamed keywords raise Python's own `TypeError` (keyword-only signature, 011 policy).
+- `mutation_rate=None` raises `ValueError` through the existing `_check`, so no formula survives.
+- The README text is pasted from 014 § *README text (exact)*, not rewritten.
+- The legacy benchmark is **not** re-run: its problems are retired by 015, which runs once after
+  014 lands. The README images come from the quickstart, whose run changes with the new defaults,
+  so they're regenerated in Task 4.
 
 ## Task list
 
-- [x] Task 1: `crossover_swap_rate` parameter + `_crossover` extraction (no behaviour change)
-- [x] Task 2: Benchmark 1/n vs 0.2 vs 0.5 on all three problems (30 seeds), results in spec 012
-- [x] ~~Task 3: set the default to the winning swap rate~~. Replaced by user decision (2026-10-16):
-  use the textbook operators instead of tuning the custom ones
-- [x] Task 3: Standard operators: uniform crossover (0.5), random-resetting mutation (default 1/n_params),
-  tournament selection + elitism unchanged. `adaptive_mutation`, creep and `crossover_swap_rate` removed
-- [x] Task 4: Benchmark the standard operators (30 seeds, all optimisers). Update specs 003/005/007/011/012,
-  README, CHANGELOG
+- [ ] Task 1: Remove `initial_population_size` (014 A)
+- [ ] Task 2: `mutation_rate` default 0.05, `None` rejected (014 B)
+- [ ] Task 3: `crossover_rate` → `crossover_probability`, statistical crossover tests (014 C)
+- [ ] Task 4: README "How a child is made", specs 003/005/007/011, CHANGELOG, regenerate images
 
 ### Checkpoint
-- [x] Spec 012 resolved (standard operators; Holder 4th / Rastrigin 3rd accepted, follow-up tracked). Full suite + lint green
+- [ ] `pytest -q` (all markers), `ruff check . && ruff format --check . && mypy`, coverage gate
+- [ ] 014's acceptance boxes ticked; grep shows no `initial_population_size`, `crossover_rate`,
+      `1/n_params`-as-default or "pair of parents performs" outside 011's removal rows and 012/014
+- [ ] Pushed; CI green on PR #1
 
 ## Risks
-
 | Risk | Mitigation |
 |---|---|
-| A higher swap rate helps Rastrigin but hurts Holder/categorical | Task 2 measures all three. Task 3 picks a default only if none regresses beyond the 30-seed IQR |
-| The cause is elsewhere (mutation, elitism) | Spec 012 step 1: revise the spec and stop. Don't tune blindly |
-| Changing the default changes every seeded run | 2.0.0 isn't published yet, so it ships inside 2.0.0 (spec 012 § Release impact) |
+| Statistical tests flaky | fixed seeds, tolerances from 014 (±0.02, ±0.03) with large samples |
+| Seeded test expectations depend on the old 1/n default | update them to the new default, never loosen asserts |
