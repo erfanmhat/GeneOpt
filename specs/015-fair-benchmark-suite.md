@@ -35,10 +35,11 @@ reaches 0 at evaluation 3,247. The unfairness is in the problem, not the library
 5. **Same representation for everyone.** Every optimiser sees the same discrete value lists. No
    optimiser gets a special initial point. Where a library seeds at the centre (NGOpt), the
    randomised optimum makes that harmless, and it is checked (principle 7).
-6. **Disclosed configuration, no per-problem tuning.** Each library uses its defaults plus a
-   shared population size. GeneOpt runs at its defaults (014: `mutation_rate` 0.05,
-   `crossover_probability` 0.9) plus a small fixed set of `mutation_rate` values, each shown as
-   its own row, never tuned per problem.
+6. **Disclosed configuration, calibrated by rule, never tuned on results.** Competitor libraries
+   use their own defaults plus a shared population size. GeneOpt doesn't rely on any default:
+   every operator parameter is passed explicitly, and `mutation_rate` is set per problem by the
+   rule in *GeneOpt configuration*. The rule depends only on what is known before a run (suite,
+   D, value counts), never on results. Every value used is listed in the report.
 7. **Head-start check.** Each run records its best value within the first 50 evaluations. If any
    optimiser's early best is already within the final target, the problem is flagged and
    investigated before results are used.
@@ -92,13 +93,53 @@ Tabular hyperparameter benchmarks (for example YAHPO Gym or HPOBench lookup tabl
 mixed categorical spaces. They're out of scope for the first version and listed here so nobody
 re-invents a synthetic "categorical toy".
 
+## GeneOpt configuration (exact)
+
+### Calibration rule for `mutation_rate`
+**Main row: μ = 1/D**, the same as `mutation_rate="auto"` (014 D). Every child gets one mutation
+on average, on every problem. Two **sensitivity rows** at μ = 0.5/D and μ = 2/D show how much
+the result depends on this choice. They're reported, not picked from afterwards.
+
+How the three inputs enter:
+- **Dimension D:** directly, through 1/D. That's the standard 1/L rule, and for bit strings the
+  classical result that 1/n is the best fixed rate on linear functions (Mühlenbein 1992; Droste,
+  Jansen & Wegener 2002).
+- **Benchmark type:** PBO genes are binary, so random resetting is a bit flip and μ = 1/n is
+  exactly the textbook bit-flip rate. bbob-mixint genes have 2–256 values. The same per-gene
+  rule applies, because random resetting always changes a mutated gene to a *different* value.
+- **Environment size (values per gene):** it changes *where* a mutation lands, not *how many*
+  genes change. The expected number of changed genes per child is μ · D for every cardinality.
+  So cardinality doesn't enter the rate. A rule that scaled μ with cardinality would be a tuning
+  knob without a published basis, so this suite doesn't use one.
+
+### Values per problem
+All runs: `population_size=50` (shared with every GA library), `crossover_probability=0.9`,
+`tournament_size=3`, `elitism=1`, `seed` = the run's seed, `maximize=False`. The run stops when
+the harness budget of unique evaluations is used up. `generations` is only an upper bound, which
+caps total proposals at 50 × the budget, as for every library (007).
+
+| Suite | D (n) | values per gene | budget (unique evals) | `mutation_rate` main (1/D) | sensitivity 0.5/D | sensitivity 2/D |
+|---|---|---|---|---|---|---|
+| bbob-mixint | 10 | 2, 2, 4, 4, 8, 8, 16, 16, 256, 256 | 1,000 | **0.1** | 0.05 | 0.2 |
+| bbob-mixint | 20 | 2 ×4, 4 ×4, 8 ×4, 16 ×4, 256 ×4 | 2,000 | **0.05** | 0.025 | 0.1 |
+| PBO | 64 | 2 | 6,400 | **0.015625** | 0.0078125 | 0.03125 |
+| PBO | 100 | 2 | 10,000 | **0.01** | 0.005 | 0.02 |
+
+Report row labels: `geneopt[mr=1/D]`, `geneopt[mr=0.5/D]` and `geneopt[mr=2/D]`. The library
+default of 0.05 isn't run as a row of its own. It coincides with the main row at D = 20 anyway.
+
+The 20-D cardinalities are COCO's (each integer cardinality repeated over its share of the
+variables); the harness reads them from `cocoex` and prints the list it actually got in the
+report, so this table is checked rather than trusted.
+
 ## Prototype test (2026-10-16)
 
 A throwaway script ran the existing harness adapters on part of the suite:
 - **Problems:** bbob-mixint f1 sphere, f10 rotated ellipsoid, f15 rotated Rastrigin, f21
   Gallagher 101 peaks and f24 Lunacek bi-Rastrigin (D = 10, instances 1–5, 1,000 evaluations),
   plus PBO F19, F24 and F25 (n = 64, instances 1–5, 2,000 evaluations).
-- **Optimisers:** all seven. GeneOpt used the then-current defaults (`mutation_rate` = 1/n).
+- **Optimisers:** all seven. GeneOpt used the then-current default `mutation_rate` = 1/n, which
+  equals the main row of *GeneOpt configuration*.
 - **Cost:** 80 min wall time on 8 processes (about 8 CPU-hours, mostly Optuna and Nevergrad).
 
 Median best over 5 instances (lower is better; bbob-mixint rows only, since the PBO rows used
@@ -134,7 +175,7 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
 - **Full run:** locally or on a larger runner, with results committed as a dated report.
 
 ## Gate (replaces 003's)
-- **Hard:** for every GeneOpt configuration, its median final value beats random search on
+- **Hard:** for the main GeneOpt row (μ = 1/D), its median final value beats random search on
   **≥ 90% of (function, dimension) pairs** in each suite, and its ECDF area is above random's.
 - **Reported, not gated:** mean rank (Friedman) across all problems, pairwise Wilcoxon
   signed-rank tests of GeneOpt against each library, and the ECDF plots. A rank regression
@@ -146,6 +187,13 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
 - Each run writes COCO/IOH logs under `bench-results/<suite>/<optimiser>/`. A summary step builds
   the Markdown report (ranks, head-start check, gate) and, when `cocopp` and IOHanalyzer exports
   are available, the ECDF figures.
+- The GeneOpt adapter takes its whole configuration from one table in `run.py`, keyed by suite
+  and D, with every operator parameter written out. A unit test checks that the adapter passes
+  each operator parameter of `GeneticAlgorithm` (`mutation_rate`, `crossover_probability`,
+  `tournament_size`, `elitism`, `population_size`) explicitly. It also checks that the table
+  matches *Values per problem* above.
+- The report starts with a configuration section: the exact GeneOpt values per problem, the
+  cardinalities read from each suite, and the library versions.
 - `tests/bench/requirements.txt` adds `coco-experiment` and `ioh` (pinned) and `scipy` (for the
   statistical tests).
 
@@ -155,6 +203,9 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
 - [ ] `--suite pbo` scores with IOH's logger. The report shows normalised fixed-budget results,
       and no raw transformed values are compared across instances.
 - [ ] The head-start check flags nothing, or every flag is explained in the report.
-- [ ] The new gate passes for each disclosed GeneOpt `mutation_rate` row, after 014 lands.
+- [ ] The new gate passes for the main GeneOpt row (μ = 1/D). The 0.5/D and 2/D rows are
+      reported alongside.
+- [ ] The report lists every GeneOpt parameter value for every (suite, D), and they match
+      *Values per problem*. No GeneOpt run depends on a library default.
 - [ ] `bench.yml` shards by optimiser, and each shard finishes within GitHub's limits.
 - [ ] Spec 007's benchmark section points here. The legacy results stay as history only.
