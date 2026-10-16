@@ -16,9 +16,9 @@ Tests: `python -m pytest -q` (+ `--bench` in the bench env) · Lint: `ruff check
 ## Task 2: Run records, GeneOpt config, Nevergrad
 **Description:** `run_fair(...)` runs one optimiser on one suite problem and returns a record with the anytime trace and early best (first 50 evals). Literal `GENEOPT_CONFIG` table. Nevergrad uses `Choice(repetitions=n)` / integer `Array`.
 **Acceptance criteria:**
-- [ ] Record trace is monotone and its last value is the run's best; `evaluations` ≤ budget
-- [ ] Config table equals factor / D exactly for every (suite, D); the adapter passes every operator parameter of `GeneticAlgorithm` explicitly (signature check)
-- [ ] Nevergrad finishes a PBO n = 64, 500-eval run in < 30 s
+- [x] Record trace is monotone and its last value is the run's best; `evaluations` ≤ budget
+- [x] Config table equals factor / D exactly for every (suite, D); the adapter passes every operator parameter of `GeneticAlgorithm` explicitly (signature check)
+- [x] Nevergrad finishes a PBO n = 64, 500-eval run in < 30 s
 **Verification:** `pytest tests/test_bench*.py` (bench env)
 **Dependencies:** Task 1
 **Files:** `tests/bench/run.py`, `tests/test_bench.py`

@@ -12,6 +12,7 @@ All problems are minimised.
 from __future__ import annotations
 
 import argparse
+import functools
 import math
 import os
 import random
@@ -22,12 +23,28 @@ from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from importlib import metadata
+from pathlib import Path
 
 import numpy as np
 
 POPULATION = 50  # shared by every GA library (fairness rule 3)
-GENEOPT_MUTATION_RATE = 0.05  # disclosed, never tuned per problem (spec 015 rule 6); the library default
 CALL_CAP = 50  # total calls allowed per unique evaluation
+EARLY = 50  # head-start check: best value within the first EARLY evaluations (spec 015 rule 7)
+
+# Spec 015 § GeneOpt configuration: every operator parameter is explicit, none is a library default.
+GENEOPT_OPERATORS = {
+    "population_size": POPULATION,
+    "crossover_probability": 0.9,
+    "tournament_size": 3,
+    "elitism": 1,
+}
+GENEOPT_MUTATION = {  # (suite, D) -> row -> mutation_rate; main row 1/D, sensitivity rows 0.5/D and 2/D
+    ("mixint", 10): {"1/D": 0.1, "0.5/D": 0.05, "2/D": 0.2},
+    ("mixint", 20): {"1/D": 0.05, "0.5/D": 0.025, "2/D": 0.1},
+    ("pbo", 64): {"1/D": 0.015625, "0.5/D": 0.0078125, "2/D": 0.03125},
+    ("pbo", 100): {"1/D": 0.01, "0.5/D": 0.005, "2/D": 0.02},
+}
+MAIN_ROW = "geneopt[mr=1/D]"
 
 
 class Exhausted(BaseException):
@@ -107,17 +124,17 @@ PROBLEMS = {
 # --- optimisers: each searches index vectors and calls f until Exhausted ---------
 
 
-def run_geneopt(p: Problem, f: Budget, seed: int) -> None:
-    from geneopt import GeneticAlgorithm
+def run_geneopt(p: Problem, f: Budget, seed: int, mutation_rate: float | None = None) -> None:
+    import geneopt
 
     names = [f"p{i}" for i in range(len(p.sizes))]
     env = {n: list(range(s)) for n, s in zip(names, p.sizes, strict=True)}
-    ga = GeneticAlgorithm(
+    ga = geneopt.GeneticAlgorithm(
         lambda **kw: f(tuple(kw[n] for n in names)),
         env,
         maximize=False,
-        population_size=POPULATION,
-        mutation_rate=GENEOPT_MUTATION_RATE,
+        mutation_rate=1 / len(p.sizes) if mutation_rate is None else mutation_rate,
+        **GENEOPT_OPERATORS,
         # GeneOpt answers repeats from its own cache, so they never reach the call cap; bound it by
         # the same number of proposals the cap allows everyone else (CALL_CAP x N individuals)
         generations=max(1, CALL_CAP * f.n_unique // POPULATION),
@@ -218,10 +235,14 @@ def run_optuna(p: Problem, f: Budget, seed: int) -> None:
 def run_nevergrad(p: Problem, f: Budget, seed: int) -> None:
     import nevergrad as ng
 
-    if p.categorical:
+    # vectorised parametrisations: same search space, and far faster than a Tuple of n parameters
+    if p.categorical and len(set(p.sizes)) == 1:
+        param = ng.p.Choice(list(range(p.sizes[0])), repetitions=len(p.sizes))
+    elif p.categorical:
         param = ng.p.Tuple(*[ng.p.Choice(list(range(s))) for s in p.sizes])
     else:
-        param = ng.p.Tuple(*[ng.p.Scalar(lower=0, upper=s - 1).set_integer_casting() for s in p.sizes])
+        upper = np.array(p.sizes) - 1
+        param = ng.p.Array(init=upper / 2, lower=0, upper=upper).set_integer_casting()
     param.random_state = np.random.RandomState(seed)
     optimizer = ng.optimizers.NGOpt(parametrization=param, budget=f.n_unique)
     while True:
@@ -238,6 +259,17 @@ OPTIMISERS: dict[str, Callable[[Problem, Budget, int], None]] = {
     "optuna": run_optuna,
     "nevergrad": run_nevergrad,
 }
+
+
+def optimisers(suite: str, dim: int) -> dict[str, Callable[[Problem, Budget, int], None]]:
+    """The competitors plus one GeneOpt row per mutation rate of spec 015's table."""
+    rows = {
+        f"geneopt[mr={row}]": functools.partial(run_geneopt, mutation_rate=rate)
+        for row, rate in GENEOPT_MUTATION[(suite, dim)].items()
+    }
+    return rows | {name: fn for name, fn in OPTIMISERS.items() if name != "geneopt"}
+
+
 DISTRIBUTIONS = {"geneopt": "GeneOpt", "pygad": "pygad", "deap": "deap", "pymoo": "pymoo",
                  "optuna": "optuna", "nevergrad": "nevergrad"}  # fmt: skip
 
@@ -268,6 +300,47 @@ def run_one(problem_name: str, optimiser: str, seed: int, budget_scale: float) -
         "seconds": time.perf_counter() - started,
         "error": error,
     }
+
+
+def run_fair(
+    suite: str, function: int, dim: int, instance: int, label: str, out_dir: Path, budget_scale: float = 1.0
+) -> dict:
+    """One optimiser on one suite problem (spec 015). The instance id is the seed."""
+    import suites
+
+    sp = suites.BUILDERS[suite](
+        function, dim, instance, Path(out_dir) / suite / "logs", label.replace("/", "_")
+    )
+    budget = max(10, int(100 * dim * budget_scale))
+    f = Budget(sp.objective, budget, CALL_CAP * budget)
+    p = Problem(f"{suite}-f{function}", sp.sizes, budget, categorical=suite == "pbo")
+    run = optimisers(suite, dim)[label]
+    random.seed(instance)
+    np.random.seed(instance)
+    started = time.perf_counter()
+    error = None
+    try:
+        run(p, f, instance)
+    except Exhausted:
+        pass
+    except Exception as e:  # recorded, never aborts the suite
+        error = f"{type(e).__name__}: {e}"[:120]
+    seconds = time.perf_counter() - started
+    better = max if sp.maximize else min
+    trace, best = [], None
+    for i, value in enumerate(sp.scored, 1):
+        if best is None or better(value, best) != best:
+            best = value
+            trace.append((i, value))
+    config = None
+    if isinstance(run, functools.partial):
+        config = {"mutation_rate": run.keywords["mutation_rate"], **GENEOPT_OPERATORS}
+    return {
+        "suite": suite, "function": function, "dim": dim, "instance": instance, "optimiser": label,
+        "seed": instance, "budget": budget, "evaluations": len(sp.scored), "seconds": seconds,
+        "error": error, "maximize": sp.maximize, "reference": sp.finish(), "best": best,
+        "early_best": better(sp.scored[:EARLY]) if sp.scored else None, "trace": trace, "config": config,
+    }  # fmt: skip
 
 
 def summarise(rows: list[dict], problem: Problem) -> dict:

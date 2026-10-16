@@ -69,3 +69,36 @@ def test_targets():
     assert suites.MIXINT_TARGETS[0] == pytest.approx(100) and suites.MIXINT_TARGETS[-1] == pytest.approx(1e-8)
     assert 1e-2 in suites.PBO_TARGETS and suites.PBO_TARGETS[-1] == 0
     assert any(t == pytest.approx(1e-2) for t in suites.MIXINT_TARGETS)
+
+
+# --- run records (spec 015 task 2) -----------------------------------------------
+
+import run as bench  # noqa: E402
+
+
+@pytest.mark.parametrize("suite, fid, dim", [("mixint", 1, 10), ("pbo", 19, 64)])
+@pytest.mark.parametrize("label", ["random", "geneopt[mr=1/D]"])
+def test_run_fair_records_an_anytime_trace(tmp_path, suite, fid, dim, label):
+    r = bench.run_fair(suite, fid, dim, 1, label, tmp_path, budget_scale=0.2)
+    assert r["error"] is None and 0 < r["evaluations"] <= r["budget"] == 20 * dim
+    evals = [e for e, _ in r["trace"]]
+    best = [b for _, b in r["trace"]]
+    assert evals == sorted(evals) and evals[0] == 1
+    assert best == sorted(best, reverse=not r["maximize"])  # improvements only
+    assert best[-1] == r["best"]
+    assert (r["early_best"] <= r["best"]) if r["maximize"] else (r["early_best"] >= r["best"])
+    assert r["reference"] is not None
+    if label.startswith("geneopt"):
+        assert r["config"]["mutation_rate"] == 1 / dim
+
+
+def test_nevergrad_is_fast_on_binary_problems():
+    pytest.importorskip("nevergrad")
+    import time
+
+    p = bench.Problem("pbo", (2,) * 64, 500, categorical=True)
+    f = bench.Budget(lambda k: float(sum(k)), 500, bench.CALL_CAP * 500)
+    started = time.perf_counter()
+    with pytest.raises(bench.Exhausted):
+        bench.run_nevergrad(p, f, 1)
+    assert time.perf_counter() - started < 30

@@ -72,3 +72,54 @@ def test_quick_benchmark_runs_every_optimiser(capsys):
         assert f"| {name} |" in out
     assert "crashed" not in out
     assert "**Gate" in out and code in (0, 1)  # smoke test only: the gate is judged on full runs
+
+
+# --- spec 015: GeneOpt configuration -------------------------------------------
+
+OPERATOR_PARAMS = {"population_size", "crossover_probability", "mutation_rate", "tournament_size", "elitism"}
+
+
+def test_geneopt_mutation_rates_follow_the_1_over_d_rule_and_spec_015():
+    spec = (Path(__file__).resolve().parents[1] / "specs" / "015-fair-benchmark-suite.md").read_text()
+    names = {"bbob-mixint": "mixint", "PBO": "pbo"}
+    rows = {}
+    for line in spec.splitlines():
+        cells = [c.strip(" *") for c in line.strip("|").split("|")]
+        if len(cells) == 7 and cells[0] in names and cells[1].isdigit():
+            rows[(names[cells[0]], int(cells[1]))] = {
+                "1/D": float(cells[4]), "0.5/D": float(cells[5]), "2/D": float(cells[6])
+            }  # fmt: skip
+    assert rows == bench.GENEOPT_MUTATION
+    for (_, dim), rates in bench.GENEOPT_MUTATION.items():
+        assert rates == {"1/D": 1 / dim, "0.5/D": 0.5 / dim, "2/D": 2 / dim}
+
+
+def test_geneopt_adapter_passes_every_operator_parameter(monkeypatch):
+    import inspect
+
+    import geneopt
+
+    assert OPERATOR_PARAMS <= set(inspect.signature(geneopt.GeneticAlgorithm).parameters)
+    seen = {}
+
+    class Recorder:
+        def __init__(self, objective, env, **kwargs):
+            seen.update(kwargs)
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr(geneopt, "GeneticAlgorithm", Recorder)
+    p = bench.Problem("x", (2,) * 4, 10, categorical=True)
+    bench.run_geneopt(p, bench.Budget(lambda k: 0.0, 10, 100), seed=1, mutation_rate=0.25)
+    assert OPERATOR_PARAMS <= set(seen) and seen["mutation_rate"] == 0.25
+
+
+def test_fair_suite_optimisers_have_three_geneopt_rows():
+    labels = list(bench.optimisers("pbo", 64))
+    assert [x for x in labels if x.startswith("geneopt")] == [
+        "geneopt[mr=1/D]",
+        "geneopt[mr=0.5/D]",
+        "geneopt[mr=2/D]",
+    ]
+    assert set(labels) - {x for x in labels if x.startswith("geneopt")} == set(bench.OPTIMISERS) - {"geneopt"}
