@@ -1,12 +1,11 @@
 name: Benchmark
 
-# Opt-in (spec 015): the fair suite at CI scope, bbob-mixint D=10 and PBO n=64, instances 1-5,
-# budget 100 x D. Sharded by optimiser x suite x instance so no job nears GitHub's 6-hour limit
-# (the slowest, Optuna on PBO, is ~13 runs x 8 min). Trigger manually, or label a PR "perf".
+# Manual only (spec 015): full benchmark runs happen locally (`python tests/bench/run.py --suite ...`),
+# so they never spend the owner's CI minutes. This workflow is kept for a deliberate, manual run of
+# the CI-scope suite: bbob-mixint D=10 and PBO n=64, instances 1-5, budget 100 x D, sharded by
+# optimiser x suite x instance (70 jobs). Never add a pull_request, push or schedule trigger.
 on:
   workflow_dispatch:
-  pull_request:
-    types: [labeled, synchronize]
 
 permissions:
   contents: read
@@ -18,7 +17,6 @@ env: # one BLAS/OpenMP thread per worker process
 
 jobs:
   run:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf')
     runs-on: ubuntu-latest
     timeout-minutes: 300
     strategy:
@@ -46,11 +44,8 @@ jobs:
 
   report:
     needs: run
-    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf'))
+    if: always()
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write # to post the report
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -71,10 +66,6 @@ jobs:
           path: |
             bench.md
             results
-      - if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file bench.md
       - if: env.GATE_FAILED == '1'
         run: |
           echo "::error::The main GeneOpt row failed the spec 015 gate against random search"

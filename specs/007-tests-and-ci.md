@@ -47,7 +47,9 @@ The core suite (`-m "not plots"`) needs only numpy and the `dev` extra.
 
 > **Superseded by [015](015-fair-benchmark-suite.md).** The three problems below are separable or
 > single-instance, so they favour some libraries for structural reasons. Their results are kept
-> as history. New claims and the gate use the 015 suite.
+> as history. New claims and the gate use the 015 suite. They now run only as the adapter smoke test
+> (`run.py --suite legacy --quick`). The first 015 results are in
+> [docs/benchmarks/2026-10-16-fair-suite.md](../docs/benchmarks/2026-10-16-fair-suite.md).
 
 GeneOpt is compared against **other optimisation libraries** on the three problems from 003.
 
@@ -170,10 +172,13 @@ Seeds: 30 · budget scale: 1 · Python 3.12.14 · GeneOpt 2.0.0, pygad 3.8.1, de
 | test-plots | 3.12 ubuntu | `pip install -e .[dev,analysis]`, `pytest -m plots` + coverage gate |
 | build | 3.12 | `python -m build`, `twine check dist/*` |
 | publish | on tag `v*`, after all of the above | trusted publishing to PyPI (`id-token: write`, environment `pypi`) |
-| bench (`bench.yml`) | `workflow_dispatch`, PRs labelled `perf` | full benchmark, table posted as PR comment and job summary; fails on the 003 gate |
+| bench (`bench.yml`) | `workflow_dispatch` only | the 015 suite at CI scope, 70 shards; report in the job summary; fails on the 015 gate |
 
-The benchmark lives in its own workflow, `bench.yml`, because it triggers on PR *label* events.
-In `ci.yml` that trigger would re-run the whole matrix every time any label is added.
+**Full benchmark runs happen locally** (`python tests/bench/run.py --suite mixint|pbo`), not on
+GitHub Actions. They take hours of CPU, and the owner's CI minutes are reserved for the unit tests
+above. `bench.yml` stays as a separate, manual-only workflow, with no pull-request, label, push or
+schedule trigger, so it can't start by accident (decided 2026-10-17, after a label-triggered run
+was cancelled).
 
 Windows matters because the disk cache writes files (path handling, file locking on append).
 Subprocess tests must pass the parent environment through: Windows Python can't start without

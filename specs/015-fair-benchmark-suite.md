@@ -194,11 +194,18 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
 - Optuna's TPE cost grows roughly quadratically with trial count, and NGOpt is slow on 64+ binary
   variables. At full size (24 functions × 2 dimensions × 15 instances, plus PBO) a single
   machine needs many hours.
-- **CI (`bench.yml`, opt-in):** bbob-mixint D = 10, instances 1–5, budget 100 · D, plus PBO
-  n = 64, instances 1–5. All seven optimisers run, sharded across a job matrix of optimiser ×
-  suite × instance (70 jobs; the slowest, Optuna on PBO, is about 13 runs × 8 min on 4 cores).
-  A final job merges the shards into one report.
-- **Full run:** locally or on a larger runner, with results committed as a dated report.
+- **Runs happen locally.** The results are committed as a dated report under
+  `docs/benchmarks/`. Benchmarks don't run on GitHub Actions: they would use the owner's CI
+  minutes.
+- **CI scope** (the default run): bbob-mixint D = 10 and PBO n = 64, instances 1–5, budget
+  100 · D. Measured on 12 local cores:
+  - bbob-mixint takes about 6 minutes.
+  - PBO takes several hours. Optuna is about 8 minutes per run when the machine is otherwise
+    idle, and Nevergrad stalls on some functions until the call cap stops it.
+- **`bench.yml`** is manual-only (`workflow_dispatch`), with no pull-request or label trigger. It
+  shards the CI scope by optimiser × suite × instance (70 jobs), for a deliberate run only.
+- **Full size** (24 functions × 2 dimensions × 15 instances, plus PBO at n = 100) also runs
+  locally, given enough hours.
 
 ## Gate (replaces 003's)
 - **Hard:** for the main GeneOpt row (μ = 1/D), its median final value beats random search on
@@ -233,5 +240,5 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
       reported alongside.
 - [ ] The report lists every GeneOpt parameter value for every (suite, D), and they match
       *Values per problem*. No GeneOpt run depends on a library default.
-- [ ] `bench.yml` shards by optimiser × suite × instance, and each shard finishes within GitHub's limits.
+- [ ] `bench.yml` is manual-only and shards by optimiser × suite × instance. Full runs happen locally.
 - [ ] Spec 007's benchmark section points here. The legacy results stay as history only.
