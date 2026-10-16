@@ -75,7 +75,7 @@ def test_finds_bowl_optimum(seed):
         maximize=False,
         population_size=40,
         generations=60,
-        mutation_rate=0.5,  # 1 / n_params: about one mutation per child on this 2-parameter problem
+        mutation_rate="auto",  # 1/D = 0.5: 0.05 gives 0.1 mutations per child at D = 2 and stalls
         seed=seed,
     ).start()
     assert r.score < 1e-9 and r.params == {"x": 0.0, "y": 0.0}
