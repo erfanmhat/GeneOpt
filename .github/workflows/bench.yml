@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+env: # one BLAS/OpenMP thread per worker process
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+
 jobs:
   run:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'perf')

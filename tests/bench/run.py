@@ -31,7 +31,11 @@ from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 
-import numpy as np
+# one BLAS/OpenMP thread per worker, set before numpy loads: N workers x N BLAS threads oversubscribe the CPU
+for _var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
+import numpy as np  # noqa: E402
 
 POPULATION = 50  # shared by every GA library (fairness rule 3)
 CALL_CAP = 50  # total calls allowed per unique evaluation
