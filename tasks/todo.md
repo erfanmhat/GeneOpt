@@ -27,9 +27,9 @@ Tests: `python -m pytest -q` (+ `--bench` in the bench env) · Lint: `ruff check
 ## Task 3: Scoring and report
 **Description:** From records: references, precision, evaluations-to-target per target, median final precision per (function, D), Friedman mean ranks, Wilcoxon GeneOpt main vs each, head-start flags, ECDF area, gate, config section, Markdown.
 **Acceptance criteria:**
-- [ ] Hand-built records: evaluations-to-target, ECDF area and ranks equal hand-computed values
-- [ ] Gate: passes at ≥ 90% better-than-random pairs with higher ECDF area; fails otherwise; both-solved ties count as wins
-- [ ] PBO reference = max(stated, observed), and observed-reference problems are listed; head-start flags at the 1e−2 target
+- [x] Hand-built records: evaluations-to-target, ECDF area and ranks equal hand-computed values
+- [x] Gate: passes at ≥ 90% better-than-random pairs with higher ECDF area; fails otherwise; both-solved ties count as wins
+- [x] PBO reference = max(stated, observed), and observed-reference problems are listed; head-start flags at the 1e−2 target
 **Verification:** `pytest tests/test_bench.py` (pure Python + scipy; scipy skipped if absent)
 **Dependencies:** Task 2
 **Files:** `tests/bench/score.py`, `tests/test_bench_score.py`

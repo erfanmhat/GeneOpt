@@ -340,6 +340,7 @@ def run_fair(
         "seed": instance, "budget": budget, "evaluations": len(sp.scored), "seconds": seconds,
         "error": error, "maximize": sp.maximize, "reference": sp.finish(), "best": best,
         "early_best": better(sp.scored[:EARLY]) if sp.scored else None, "trace": trace, "config": config,
+        "sizes": list(sp.sizes),
     }  # fmt: skip
 
 

@@ -6,3 +6,4 @@ pygad==3.8.1
 pymoo==0.6.2
 coco-experiment==2.8.2
 ioh==0.3.22
+scipy==1.18.1

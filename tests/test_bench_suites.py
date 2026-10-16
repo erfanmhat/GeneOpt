@@ -88,6 +88,7 @@ def test_run_fair_records_an_anytime_trace(tmp_path, suite, fid, dim, label):
     assert best[-1] == r["best"]
     assert (r["early_best"] <= r["best"]) if r["maximize"] else (r["early_best"] >= r["best"])
     assert r["reference"] is not None
+    assert len(r["sizes"]) == dim
     if label.startswith("geneopt"):
         assert r["config"]["mutation_rate"] == 1 / dim
 
