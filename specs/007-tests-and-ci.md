@@ -45,6 +45,10 @@ The core suite (`-m "not plots"`) needs only numpy and the `dev` extra.
 
 ## Benchmarks (`tests/bench/run.py`)
 
+> **Superseded by [015](015-fair-benchmark-suite.md).** The three problems below are separable or
+> single-instance, so they favour some libraries for structural reasons. Their results are kept
+> as history. New claims and the gate use the 015 suite.
+
 GeneOpt is compared against **other optimisation libraries** on the three problems from 003.
 
 | Optimiser | Library | Kind |
