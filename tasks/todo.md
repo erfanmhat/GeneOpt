@@ -27,10 +27,10 @@ Tests: `python -m pytest -q` · Lint: `ruff check . && ruff format --check . && 
 ## Task 3: `crossover_probability`
 **Description:** Rename `crossover_rate` → `crossover_probability` (default 0.9) in the constructor and `_crossover`; docstring uses 014 C steps 1–3.
 **Acceptance criteria:**
-- [ ] `crossover_rate=` raises `TypeError`; `crossover_probability` validated in [0, 1]
-- [ ] p_c = 1, parents all-0 / all-1: each child gene from A with frequency 0.5 ± 0.02; child 2 is always the complement of child 1
-- [ ] Long genomes: fraction of recombining pairs = p_c ± 0.03 for p_c ∈ {0.3, 0.9}
-- [ ] p_c = 0: children equal parents
+- [x] `crossover_rate=` raises `TypeError`; `crossover_probability` validated in [0, 1]
+- [x] p_c = 1, parents all-0 / all-1: each child gene from A with frequency 0.5 ± 0.02; child 2 is always the complement of child 1
+- [x] Long genomes: fraction of recombining pairs = p_c ± 0.03 for p_c ∈ {0.3, 0.9}
+- [x] p_c = 0: children equal parents
 **Verification:** `pytest -q`, lint, mypy
 **Dependencies:** Task 2
 **Files:** `geneopt/core.py`, `tests/test_core.py`, `tests/test_api.py`

@@ -86,7 +86,7 @@ def test_environment_is_required_positional():
 @pytest.mark.parametrize(
     "kwargs, name",
     [
-        ({"crossover_rate": 1.5}, "crossover_rate"),
+        ({"crossover_probability": 1.5}, "crossover_probability"),
         ({"mutation_rate": -0.1}, "mutation_rate"),
         ({"population_size": 1}, "population_size"),
         ({"tournament_size": 0}, "tournament_size"),

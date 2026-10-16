@@ -325,31 +325,48 @@ def test_mutation_rate_none_is_rejected():
         GeneticAlgorithm(total, {"x": [1, 2]}, mutation_rate=None)
 
 
-# --- crossover: uniform (spec 012) ---------------------------------------------
+# --- crossover: uniform, Syswerda 1989 (spec 014 C) ---------------------------
 
 
-def test_uniform_crossover_swaps_half_the_genes_of_crossing_pairs():
+def test_uniform_crossover_takes_each_gene_from_either_parent_with_p_one_half():
     rng = np.random.default_rng(0)
     p1, p2 = np.zeros((5_000, 10), dtype=int), np.ones((5_000, 10), dtype=int)
-    c1, c2 = _crossover(p1, p2, crossover_rate=1.0, rng=rng)
-    assert abs(c1.mean() - 0.5) < 0.02  # c1 holds a 1 exactly where a gene was swapped
+    c1, c2 = _crossover(p1, p2, crossover_probability=1.0, rng=rng)
+    assert abs(c1.mean() - 0.5) < 0.02  # c1 holds a 1 exactly where it took the gene from p2
+    assert (c2 == 1 - c1).all()  # child 2 takes the gene child 1 didn't
 
 
-def test_crossover_rate_zero_never_swaps():
+@pytest.mark.parametrize("p_c", [0.3, 0.9])
+def test_share_of_recombining_pairs_is_crossover_probability(p_c):
     rng = np.random.default_rng(0)
-    p1, p2 = np.zeros((100, 4), dtype=int), np.ones((100, 4), dtype=int)
-    c1, c2 = _crossover(p1, p2, crossover_rate=0.0, rng=rng)
-    assert (c1 == 0).all() and (c2 == 1).all()
+    p1, p2 = np.zeros((5_000, 64), dtype=int), np.ones((5_000, 64), dtype=int)
+    c1, _ = _crossover(p1, p2, crossover_probability=p_c, rng=rng)
+    recombined = c1.any(axis=1)  # a recombining 64-gene pair is all-zero with p = 2^-64
+    assert abs(recombined.mean() - p_c) < 0.03
+
+
+def test_crossover_probability_zero_copies_the_parents():
+    rng = np.random.default_rng(0)
+    p1, p2 = rng.integers(0, 9, (100, 4)), rng.integers(0, 9, (100, 4))
+    c1, c2 = _crossover(p1, p2, crossover_probability=0.0, rng=rng)
+    assert (c1 == p1).all() and (c2 == p2).all()
 
 
 def test_crossover_children_hold_exactly_the_parents_genes():
     rng = np.random.default_rng(1)
     p1, p2 = rng.integers(0, 50, (200, 7)), rng.integers(0, 50, (200, 7))
-    c1, c2 = _crossover(p1, p2, crossover_rate=0.9, rng=rng)
+    c1, c2 = _crossover(p1, p2, crossover_probability=0.9, rng=rng)
     assert ((c1 == p1) | (c1 == p2)).all() and ((c1 + c2) == (p1 + p2)).all()
 
 
-@pytest.mark.parametrize("kwarg", ["adaptive_mutation", "crossover_swap_rate", "initial_population_size"])
+def test_crossover_probability_is_validated():
+    with pytest.raises(ValueError, match="crossover_probability"):
+        GeneticAlgorithm(total, {"x": [1, 2]}, crossover_probability=1.5)
+
+
+@pytest.mark.parametrize(
+    "kwarg", ["adaptive_mutation", "crossover_swap_rate", "initial_population_size", "crossover_rate"]
+)
 def test_non_standard_operator_options_are_gone(kwarg):
     with pytest.raises(TypeError, match=kwarg):
         GeneticAlgorithm(total, {"x": [1, 2]}, **{kwarg: 0.5})

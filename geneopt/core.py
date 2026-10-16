@@ -54,11 +54,12 @@ def _tournament(signed_scores, k: int, m: int, rng) -> np.ndarray:
     return candidates[np.arange(m), np.argmax(signed_scores[candidates], axis=1)]
 
 
-def _crossover(p1, p2, crossover_rate: float, rng) -> tuple[np.ndarray, np.ndarray]:
-    """Uniform crossover: each pair crosses with ``crossover_rate``; a crossing pair exchanges
-    each gene with probability 1/2."""
-    swap = rng.random(p1.shape) < 0.5
-    swap &= (rng.random(len(p1)) < crossover_rate)[:, None]
+def _crossover(p1, p2, crossover_probability: float, rng) -> tuple[np.ndarray, np.ndarray]:
+    """Uniform crossover (Syswerda 1989). Each pair recombines with ``crossover_probability``,
+    otherwise its children are copies of the parents. In a recombining pair, a fair coin decides
+    for every gene which parent child 1 takes it from; child 2 takes it from the other parent."""
+    swap = rng.random(p1.shape) < 0.5  # fair coin: neither parent is favoured
+    swap &= (rng.random(len(p1)) < crossover_probability)[:, None]
     return np.where(swap, p2, p1), np.where(swap, p1, p2)
 
 
@@ -117,7 +118,7 @@ class GeneticAlgorithm:
         maximize: bool = True,
         population_size: int = 100,
         generations: int = 100,
-        crossover_rate: float = 0.9,
+        crossover_probability: float = 0.9,
         mutation_rate: float = 0.05,
         tournament_size: int = 3,
         elitism: int = 1,
@@ -133,7 +134,7 @@ class GeneticAlgorithm:
         if not callable(objective_func):
             raise TypeError(f"objective_func must be callable, got {objective_func!r}")
         env = _check_environment(environment)
-        _check("crossover_rate", crossover_rate, 0 <= crossover_rate <= 1, "in [0, 1]")
+        _check("crossover_probability", crossover_probability, 0 <= crossover_probability <= 1, "in [0, 1]")
         _check(
             "mutation_rate", mutation_rate, mutation_rate is not None and 0 <= mutation_rate <= 1, "in [0, 1]"
         )
@@ -170,7 +171,7 @@ class GeneticAlgorithm:
         self._sign = 1.0 if maximize else -1.0
         self._population_size = population_size
         self._generations = generations
-        self._crossover_rate = crossover_rate
+        self._crossover_probability = crossover_probability
         self._mutation_rate = mutation_rate
         self._tournament_size = tournament_size
         self._elitism = elitism
@@ -241,7 +242,7 @@ class GeneticAlgorithm:
         n_children = self._population_size - len(elites)
         n_pairs = (n_children + 1) // 2
         parents = population[_tournament(signed, self._tournament_size, 2 * n_pairs, rng)]
-        c1, c2 = _crossover(parents[:n_pairs], parents[n_pairs:], self._crossover_rate, rng)
+        c1, c2 = _crossover(parents[:n_pairs], parents[n_pairs:], self._crossover_probability, rng)
         children = np.vstack([c1, c2])[:n_children]
         children = _mutate(children, self._mutation_rate, self._sizes, rng)
         return np.vstack([np.array(elites).reshape(-1, len(self._names)), children])
