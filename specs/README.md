@@ -97,7 +97,7 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 |---|---|---|
 | Operator parameter cleanup | [014](014-operator-parameters.md) | Next stage. Lands before 2.0.0 is published |
 | Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Next stage. Replaces the 007 problems, which favoured separable-problem specialists. Prototype: GeneOpt 3rd of 7 |
-| Benchmark figures | [016](016-benchmark-plots.md) | Proposed; three open questions for the owner. Built with or after 015 |
+| Benchmark figures | [016](016-benchmark-plots.md) | Approved. Built after 015 |
 | Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | To be judged on the 015 suite, not the old Rastrigin/Holder problems |
 | PyPI publishing | [013](013-release-2.0.0.md) | CI is green on all 3 OSes (PR #1). Waiting on a one-time PyPI setting by the owner, then merge and tag |
 | `History.save()` and `int32` genome storage | [002 §1](002-history-and-plots.md) | Marked *not built yet*. Nobody needs them so far |

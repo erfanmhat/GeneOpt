@@ -1,6 +1,6 @@
 # 016 — Benchmark Figures: ECDF, Performance Profile, Speed–Success Pareto
 
-**Status:** proposed, awaiting owner approval · **Severity:** 🟡 medium (reporting, not search) ·
+**Status:** approved (2026-10-16) · **Severity:** 🟡 medium (reporting, not search) ·
 **Depends on:** 015 (the suite and its logs) · **Stack:** matplotlib + pandas (as `geneopt/plots.py`)
 
 ## Objective
@@ -18,7 +18,7 @@ for anyone reading a published benchmark, so they must work in a paper.
 Success means that each figure, built from one tidy DataFrame, is correct against values computed
 by hand. It also has to stay readable with 7–10 optimisers, and it must never hide missing runs.
 
-## Assumptions (correct these before approval)
+## Decisions (owner-confirmed)
 
 1. **The code lives in the benchmark harness, not the library:** a new `tests/bench/plots.py`.
    These figures compare libraries, which isn't something a GeneOpt user calls. The library's
@@ -84,8 +84,7 @@ def palette(algorithms: Iterable[str]) -> dict[str, Style]: ...   # shared by al
 - The y-axis runs from 0 to 1. The legend is ordered by final ECDF value, best first (COCO style).
 
 ### 2. Dolan–Moré performance profile (Dolan & Moré, 2002)
-- Fix one `target` (default: the hardest target that at least one algorithm reached on at least
-  half the problems; the choice is printed in the axis label).
+- Fix one `target` (default **1e−2**, as for the Pareto scatter; it is printed in the axis label).
 - For problem p and algorithm s, t_{p,s} = `evaluations_to_target`, and ∞ if not reached.
   r_{p,s} = t_{p,s} / min_s t_{p,s}.
 - **x:** τ ≥ 1, log2 scale, up to `tau_max` (default: 2 × the largest finite ratio).
@@ -98,8 +97,9 @@ def palette(algorithms: Iterable[str]) -> dict[str, Style]: ...   # shared by al
 ### 3. Speed vs success Pareto scatter
 - One point per algorithm.
   - **x:** mean `elapsed_time` per run (or mean `evaluations` with `cost="evaluations"`), log scale.
-  - **y:** success rate, the share of problems on which the algorithm reached `target` (default:
-    the hardest target in the frame, i.e. the global optimum for PBO and 1e−8 for COCO).
+  - **y:** success rate, the share of problems on which the algorithm reached `target` (default
+    **1e−2**: f − f_opt ≤ 0.01 on COCO, relative gap ≤ 1% on PBO). Requiring the exact optimum
+    at a 100·D budget would put every library near 0% and erase the comparison.
   - 95% Wilson interval as a vertical error bar.
 - **Pareto frontier:** the points no other point beats on both axes (lower cost *and* higher
   success, ties count as not beaten). They're connected left to right by a dashed line and
@@ -203,9 +203,10 @@ test's comments:
       algorithm (a sanity check that the data path is right).
 - [ ] Figures are readable in greyscale and at single-column width (3.5 in).
 
-## Open questions
-1. **ECDF x-axis:** evaluations / dimension (COCO, assumed), or raw evaluations?
-2. **Pareto y default:** the hardest target (global optimum), assumed. At 100·D budget that
-   success rate may be near 0 for everyone on bbob-mixint. Would 1e−2 be a more informative
-   default there?
-3. **Location:** `tests/bench/plots.py` (assumed), or a public `geneopt.bench` module?
+## Resolved questions (owner, 2026-10-16)
+1. **ECDF x-axis:** evaluations / D (COCO/BBOB). Otherwise high dimensions, which need far more
+   evaluations, would dominate a pooled ECDF.
+2. **Default target for the profile and the Pareto scatter:** 1e−2, not the global optimum. If
+   1e−2 isn't among the frame's targets, `ValueError` lists the available ones.
+3. **Location:** `tests/bench/plots.py`. These are internal validation tools. A public
+   `geneopt.bench` would grow the user API and pull benchmark dependencies onto users.
