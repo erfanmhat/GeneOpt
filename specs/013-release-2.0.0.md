@@ -38,8 +38,9 @@ PyPI login.
 
 ### Release (owner decides when)
 - [x] 012 is in 2.0.0 (standard operators).
-- [ ] 014 (parameter cleanup) lands before publishing: it changes the public signature.
-- [ ] 015 suite run once on the final 2.0.0 code, report committed.
+- [x] 014 (parameter cleanup) lands before publishing: it changes the public signature.
+- [x] 015 suite run once on the final 2.0.0 code, report committed:
+      [docs/benchmarks/2026-10-16-fair-suite.md](../docs/benchmarks/2026-10-16-fair-suite.md). The gate passes on both suites.
 - [ ] Merge the PR into `master`.
 - [ ] Tag and push: `git tag v2.0.0 && git push origin v2.0.0`. CI runs, then `publish` uploads.
 - [ ] Check https://pypi.org/project/GeneOpt/2.0.0/ shows the README with images, and that

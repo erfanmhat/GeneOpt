@@ -36,7 +36,7 @@ returns stale scores across runs, and it can't store non-numeric parameters.
 | 012 | [Crossover mixing](012-crossover-mixing.md) | Benchmark gap → standard GA operators adopted. Local refinement is the open follow-up | 🟠 high |
 | 013 | [Releasing 2.0.0](013-release-2.0.0.md) | Push, CI on the full matrix, PyPI trusted publisher, tag | 🟡 process |
 | 014 | [Operator parameters](014-operator-parameters.md) | Remove `initial_population_size`; `mutation_rate` default 0.05 or `"auto"` (1/D); uniform crossover named and described by the standard (p_c, p_s = 0.5) | 🟠 high |
-| 015 | [Fair benchmark suite](015-fair-benchmark-suite.md) | COCO bbob-mixint + IOHprofiler PBO, randomised instances, ECDF scoring, head-start check; prototype tested | 🟠 high |
+| 015 | [Fair benchmark suite](015-fair-benchmark-suite.md) | COCO bbob-mixint + IOHprofiler PBO, randomised instances, ECDF scoring, head-start check; implemented, first run committed | 🟠 high |
 | 016 | [Benchmark figures](016-benchmark-plots.md) | ECDF, Dolan–Moré performance profile and speed–success Pareto scatter for the 015 report | 🟡 medium |
 
 ## Bug ledger
@@ -96,9 +96,9 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 | Item | Where | Notes |
 |---|---|---|
 | Operator parameter cleanup | [014](014-operator-parameters.md) | Done. 015 runs next, at the new defaults |
-| Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Next stage. Replaces the 007 problems, which favoured separable-problem specialists. Prototype: GeneOpt 3rd of 7 |
-| Benchmark figures | [016](016-benchmark-plots.md) | Approved. Built after 015 |
-| Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | To be judged on the 015 suite, not the old Rastrigin/Holder problems |
+| Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Done. First run: [report](../docs/benchmarks/2026-10-16-fair-suite.md), gate passes. GeneOpt 1/D ranks 4.42 on bbob-mixint, 3.00 on PBO |
+| Benchmark figures | [016](016-benchmark-plots.md) | Approved. Next stage: plots `score.runs_rows`, which 015 now provides |
+| Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | The 015 run shows the gap: DEAP/pymoo lead on smooth bbob-mixint functions, and 0.5/D helps there. Judge any change on the 015 suite |
 | PyPI publishing | [013](013-release-2.0.0.md) | CI is green on all 3 OSes (PR #1). Waiting on a one-time PyPI setting by the owner, then merge and tag |
 | `History.save()` and `int32` genome storage | [002 §1](002-history-and-plots.md) | Marked *not built yet*. Nobody needs them so far |
 | Per-generation `callback` hook | [005 §5](005-public-api-and-logging.md) | Optional by design. Build it when someone asks |

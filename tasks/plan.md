@@ -33,12 +33,12 @@ CI scope produces the first committed report.
 - [x] Task 2: per-run records with anytime traces, GeneOpt config table, vectorised Nevergrad
 - [x] Task 3: scoring and report: targets, references, head-start check, ranks, Wilcoxon, ECDF area, gate
 - [x] Task 4: CLI (`--suite/--dims/--instances/--functions/--out-dir/--report-only`), sharded `bench.yml`
-- [ ] Task 5: local run at CI scope, committed dated report; specs 007/013/015/README updated
+- [x] Task 5: local run at CI scope, committed dated report; specs 007/013/015/README updated
 
 ### Checkpoint
-- [ ] `pytest -q` (core env, and bench env with `--bench`), ruff, mypy
-- [ ] Spec 015 acceptance boxes ticked, or explained where the run says otherwise
-- [ ] Pushed; CI green on PR #1
+- [x] `pytest -q` (core env, and bench env with `--bench`), ruff, mypy
+- [x] Spec 015 acceptance boxes ticked, or explained where the run says otherwise
+- [x] Pushed; CI green on PR #1
 
 ## Risks
 | Risk | Mitigation |

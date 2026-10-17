@@ -1,6 +1,6 @@
 # 015 — A Fair Benchmark Suite
 
-**Status:** proposed, prototype tested · **Severity:** 🟠 high (it decides every operator change) ·
+**Status:** implemented; first run 2026-10-16, gate passes ([report](../docs/benchmarks/2026-10-16-fair-suite.md)) · **Severity:** 🟠 high (it decides every operator change) ·
 **Replaces:** the three problems of 007 § Benchmarks · **Pairs with:** 014
 
 ## Why the current suite is unfair
@@ -231,14 +231,30 @@ Optuna 3.62, Nevergrad 4.25, PyGAD 5.38, random 6.88.
   statistical tests). `cocopp` comes with 016.
 
 ## Acceptance criteria
-- [ ] `python tests/bench/run.py --suite mixint --dims 10 --instances 1-5` runs all seven
+- [x] `python tests/bench/run.py --suite mixint --dims 10 --instances 1-5` runs all seven
       optimisers and writes COCO logs, plus a Markdown report with ranks and the head-start check.
-- [ ] `--suite pbo` scores with IOH's logger. The report shows normalised fixed-budget results,
-      and no raw transformed values are compared across instances.
-- [ ] The head-start check flags nothing, or every flag is explained in the report.
-- [ ] The new gate passes for the main GeneOpt row (μ = 1/D). The 0.5/D and 2/D rows are
-      reported alongside.
-- [ ] The report lists every GeneOpt parameter value for every (suite, D), and they match
+- [x] `--suite pbo` scores IOH's untransformed values (see *Scoring decisions*) and writes IOH
+      Analyzer logs. The report shows normalised results, and no raw transformed values are
+      compared across instances.
+- [x] The head-start check flags nothing, on either suite.
+- [x] The new gate passes for the main GeneOpt row (μ = 1/D) on both suites. The 0.5/D and 2/D
+      rows are reported alongside.
+- [x] The report lists every GeneOpt parameter value for every (suite, D), and they match
       *Values per problem*. No GeneOpt run depends on a library default.
-- [ ] `bench.yml` is manual-only and shards by optimiser × suite × instance. Full runs happen locally.
-- [ ] Spec 007's benchmark section points here. The legacy results stay as history only.
+- [x] `bench.yml` is manual-only and shards by optimiser × suite × instance. Full runs happen locally.
+- [x] Spec 007's benchmark section points here. The legacy results stay as history only.
+
+## First run (2026-10-16)
+
+Full results: [docs/benchmarks/2026-10-16-fair-suite.md](../docs/benchmarks/2026-10-16-fair-suite.md).
+- **Gate:** passes on both suites.
+- **Mean rank of the main GeneOpt row:** 4.42 on bbob-mixint (DEAP 2.75 and pymoo 2.79 lead), and
+  3.00 on PBO, where only GeneOpt's own 0.5/D row is ahead.
+- **Mutation rate:** 0.5/D beats 1/D on bbob-mixint's separable and ill-conditioned groups
+  (sign test and log-Wilcoxon, Holm p ≤ 1.1e−4), but not on PBO. No default changes.
+- **Pairwise tests** in the report are scale-free (sign test, Wilcoxon on log10 precision). A
+  Wilcoxon test on raw differences was replaced: one function's scale could decide it.
+- **Comparability:** pymoo and Nevergrad stop early on several PBO functions (pymoo 17–73%,
+  Nevergrad 50–58% of the budget). They're footnoted in the report, and spec 007's rules are
+  kept.
+- **Reproducibility:** four GeneOpt cells, rerun, were identical.

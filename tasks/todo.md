@@ -49,8 +49,8 @@ Tests: `python -m pytest -q` (+ `--bench` in the bench env) · Lint: `ruff check
 ## Task 5: First report
 **Description:** Run CI scope locally (mixint D10 i1–5, PBO n64 i1–5, all optimisers + 3 GeneOpt rows); commit the report as `docs/benchmarks/2026-10-16-fair-suite.md`; update specs.
 **Acceptance criteria:**
-- [ ] Report committed with config section, ranks, head-start check and gate result
-- [ ] Specs 015 (status, acceptance), 007 pointer, 013 checklist, specs/README updated
+- [x] Report committed with config section, ranks, head-start check and gate result
+- [x] Specs 015 (status, acceptance), 007 pointer, 013 checklist, specs/README updated
 **Verification:** report present, `pytest -q`
 **Dependencies:** Task 4
 **Files:** `docs/benchmarks/*.md`, `specs/*.md`
