@@ -1,3 +1,13 @@
 cache/
 .idea/
 catboost_info/
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+.venv/
+.pytest_cache/
+bench-results/
+exdata/
+.coverage

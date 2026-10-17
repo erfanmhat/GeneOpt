@@ -1,0 +1,11 @@
+# Competitors and benchmark suites for tests/bench/run.py (specs 007, 015). Pinned so results are comparable over time.
+deap==1.4.4
+nevergrad==1.0.12
+optuna==5.0.0
+pygad==3.8.1
+pymoo==0.6.2
+coco-experiment==2.8.2
+ioh==0.3.22
+scipy==1.18.1
+matplotlib==3.11.2
+pandas==3.0.6

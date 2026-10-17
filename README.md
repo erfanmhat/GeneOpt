@@ -1,313 +1,293 @@
-# GeneOpt - Genetic Algorithm Python Library
+# GeneOpt
 
-GeneOpt is a Python library designed for creating and optimizing genetic algorithms, including support for distributed evaluation and detailed plotting tools. It provides a robust framework for solving optimization problems by simulating the principles of natural selection.
-
-## Features
-
-- **Custom Objective Function**: Easily integrate your specific optimization goals.
-- **Flexible Optimization Goals**: Support for both maximization and minimization.
-- **Distributed Computation**: Enables scaling across multiple servers for resource-intensive tasks.
-- **Advanced Configurations**: Control mutation rates, crossover rates, and population dynamics.
-- **Comprehensive Caching**: Choose between `Ram` or `HardDisk` for efficient handling of large datasets.
-- **Detailed Plotting**: Visualize best scores, parameter values, diversity, and more across generations.
-
-## Repository
-
-Find the source code and contribute on GitHub: [GeneOpt Repository](https://github.com/erfanmhat/GeneOpt)
-
-## Installation
-
-Install GeneOpt via pip:
+A genetic algorithm for searching **discrete** spaces: numeric grids, categorical choices, or a mix.
+It caches every evaluation (in memory or on disk), can evaluate a generation in parallel on any
+`concurrent.futures` executor, and plots what the population did.
 
 ```bash
-pip install GeneOpt
+pip install GeneOpt                # core: numpy only
+pip install "GeneOpt[plots]"       # + matplotlib, pandas  (ga.plot(), ga.evaluations())
+pip install "GeneOpt[analysis]"    # + catboost            (feature-importance plots)
 ```
 
-## Getting Started
+Requires Python 3.10+.
 
-Here's a simplified example to get started with GeneOpt:
+## Quickstart
 
-### Local Optimization
-
-This example demonstrates using GeneOpt to optimize a function locally:
+Each environment entry lists the values a parameter may take. The objective receives one value
+per parameter as keyword arguments and returns a number.
 
 ```python
+"""Minimise the Holder table function on a 4096 x 4096 grid."""
+
+import logging
+
 import numpy as np
 
-from GeneOpt import GeneticAlgorithm, GeneticAlgorithmComparisonType, GeneticAlgorithmCacheType, Logger
+from geneopt import GeneticAlgorithm
 
 
 def holder_table(x1, x2):
-    X = (x1, x2)
-    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
+    return -abs(np.sin(x1) * np.cos(x2) * np.exp(abs(1 - np.sqrt(x1**2 + x2**2) / np.pi)))
+
+
+def main(generations=100, population_size=100):
+    environment = {
+        "x1": np.linspace(-10, 10, 2**12),
+        "x2": np.linspace(-10, 10, 2**12),
+    }
+    ga = GeneticAlgorithm(
+        holder_table,
+        environment,
+        optimizer_name="holder_table",
+        maximize=False,
+        population_size=population_size,
+        generations=generations,
+        tournament_size=4,
+        cache_dir="./cache",
+        seed=42,
+    )
+    result = ga.start()
+    print(f"{result.params} = {result.score}")
+    ga.plot()  # PNGs in ./cache/holder_table-plots/
+    return result
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    main()
+```
+
+`start()` returns a `Result`:
+
+| Field | Meaning |
+|---|---|
+| `params` | best parameters found (plain Python values) |
+| `score` | their score |
+| `generation` | generation in which they were found |
+| `n_evaluations` | objective calls made in this run (cache misses) |
+| `n_cache_hits` | individuals served from the cache |
+| `elapsed` | wall time in seconds |
+| `stopped_by` | `"generations"`, `"early_stopping"`, `"target_score"` or `"callback"` |
+
+After `start()`, `ga.history` holds every generation's genomes, scores and cache hits
+(`ga.history.to_frame()` gives a long DataFrame), and `ga.evaluations()` gives the unique
+evaluated points. `ga.history.save("run.npz")` writes it to a compressed file without pickle, and
+`History.load("run.npz")` reads it back; parameter values must be JSON values (numbers, strings,
+booleans, `None`) to be saved.
+
+### Progress and custom stopping
+
+`callback` is called after each generation with a `GenerationStats`: `generation`, `best_params`
+and `best_score` (best so far), `generation_best`, `n_evaluations` and `n_cache_hits` (so far) and
+`elapsed`. Returning `True` stops the run with `stopped_by="callback"`. It's the hook for progress
+bars, time limits, dashboards or checkpoints.
+
+```python
+from geneopt import GeneticAlgorithm
+
+
+def progress(stats):
+    print(f"generation {stats.generation}: best {stats.best_score:.3g}, {stats.n_evaluations} evaluations")
+    return stats.best_score >= 0.99 or stats.elapsed > 60  # True stops the run
+
+
+ga = GeneticAlgorithm(
+    lambda x: x / 100, {"x": range(101)}, population_size=20, generations=50, callback=progress
+)
+print(ga.start().stopped_by)
+```
+
+## Categorical and mixed spaces
+
+Values can be anything: strings, ints, floats, objects. GeneOpt uses the standard operators for
+this kind of search: tournament selection with elitism, uniform crossover, and random-resetting
+mutation, where a mutated parameter takes a uniformly chosen other value.
+
+```python
+"""Search a mixed categorical / numeric space, e.g. model hyperparameters."""
+
+import logging
+import math
+
+from geneopt import GeneticAlgorithm
+
+
+def validation_score(optimizer, activation, layers, learning_rate, batch_size):
+    """A stand-in for training a model; replace with real training + validation."""
+    score = {"sgd": 0.80, "adam": 0.88, "rmsprop": 0.85}[optimizer]
+    score += {"relu": 0.02, "tanh": 0.0, "gelu": 0.03}[activation]
+    score -= 0.01 * abs(layers - 3)
+    score -= 0.02 * abs(math.log10(learning_rate) + 3)
+    score -= 0.005 * abs(math.log2(batch_size) - 6)
+    return score
+
+
+def main(generations=30, population_size=30):
     environment = {
-        "x1": np.linspace(-10, 10, 2 ** 12),
-        "x2": np.linspace(-10, 10, 2 ** 12)
+        "optimizer": ["sgd", "adam", "rmsprop"],
+        "activation": ["relu", "tanh", "gelu"],
+        "layers": [1, 2, 3, 4, 5, 6],
+        "learning_rate": [1e-5, 1e-4, 1e-3, 1e-2, 1e-1],
+        "batch_size": [16, 32, 64, 128, 256],
     }
-    genetic_algorithm = GeneticAlgorithm(
-        objective_func=holder_table,
-        comparison_type=GeneticAlgorithmComparisonType.minimize,
-        optimizer_name="op_holder_table",
-        environment=environment,
-        seed=42,
-        mutation_rate=0.06,
-        number_of_generations=100,
-        number_of_population=100,
-        r_cross=0.63,
-        start_number_of_population=100,
-        tournament_selection_number=4,
-        cache_type=GeneticAlgorithmCacheType.HardDisk,
-        verbose=1
+    ga = GeneticAlgorithm(
+        validation_score,
+        environment,
+        optimizer_name="hparams",
+        population_size=population_size,
+        generations=generations,
+        seed=0,
     )
-    best, score = genetic_algorithm.start()
-    Logger.log_m("Done!")
-    Logger.log_m(f"{best} = {score}")
-    genetic_algorithm.plot()
-```
-
-### Outputs
-
-1. **Best Solution**: Prints the optimal parameters and corresponding fitness score.
-2. **Plots**: Saves detailed graphs to the `./cache/` directory.
-
-## Plotting Functions
-
-GeneOpt provides a variety of detailed plots to understand the algorithm's performance:
-
-### 1. Best Score Over Generations
-Plots the best score achieved in each generation.
-![Best Score Over Generations Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/best_score_over_generations.png)
-
-### 2. Best Parameter Values Over Generations
-Shows the evolution of parameters contributing to the best scores.
-![Best Parameter a Value Over Generations Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/best_parameter_x2_value_over_generations.png)
-
-### 3. Population Diversity
-Illustrates the diversity within the population for each generation.
-![Population Diversity Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/population_diversity.png)
-
-### 4. Gene Frequencies
-Displays the frequency of genes across generations using a heatmap.
-![Gene Frequencies Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/gene_frequencies.png)
-
-### 5. Feature Analysis
-Includes:
-- Pairwise correlation with score.
-![Pairwise correlation with score Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/pairwise_correlation_with_score.png)
-- Pairwise correlation of features.
-![Pairwise correlation of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/pairwise_correlation_of_features.png)
-- Predicted vs Actual values using regression.
-![Predicted vs Actual values using regression Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/predicted_vs_actual_values_using_regression.png)
-- Feature importance analysis.
-![Feature importance analysis Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/feature_importance_analysis.png)
-- Histograms plot of features.
-![Histograms plot of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/histograms_plot_of_features.png)
-- scatter plot of features.
-![scatter plot of features Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/scatter_plot_of_features.png)
-- KDE plot of features.
-![KDE plot of features](https://github.com/erfanmhat/GeneOpt/blob/master/image/kde_plot_of_features.png)
-- Parameter and Parameter and score scatter plots
-![Parameter and Parameter and score scatter plots Image](https://github.com/erfanmhat/GeneOpt/blob/master/image/parameter_and_parameter_and_score_scatter_plots.png)
-
-## Distributed Optimization with GeneOpt
-
-GeneOpt can also be used for distributed optimization by leveraging multiple servers. This setup evaluates the objective function across different ports, enabling efficient parallel processing for computationally intensive tasks.
-
-### Components
-
-1. **Server**: A Flask-based API to evaluate the objective function(or any other programing language and framework).
-2. **Server Runner**: A script to start multiple instances of the server.
-3. **Main**: The main genetic algorithm execution script using asynchronous requests.
-
-### Server Code (`server.py`)
-
-The server evaluates the objective function via HTTP GET requests.
-
-```python
-import sys
-import time
-
-import numpy as np
-from flask import Flask, jsonify, request
-
-app = Flask(__name__)
-
-
-def holder_table(x1, x2):
-    time.sleep(0.2) # Simulate CPU-limited task
-    X = (x1, x2)
-    return -abs(np.sin(X[0]) * np.cos(X[1]) * np.exp(abs(1 - np.sqrt(X[0] ** 2 + X[1] ** 2) / np.pi)))
-
-
-@app.route('/run_objective', methods=['GET'])
-def run_objective():
-    input_parameters = request.args.to_dict()
-    try:
-        parameters = {key: float(value) for key, value in input_parameters.items()}
-    except ValueError:
-        res = jsonify({"data": "Bad request: All parameters must be numeric"})
-        res.status_code = 400
-        return res
-
-    return jsonify({"data": holder_table(**parameters)})
-
-
-if __name__ == '__main__':
-    app.run(
-        debug=True,
-        port=int(sys.argv[1]),
-        threaded=False
+    result = ga.start()
+    print(
+        f"best: {result.params} -> {result.score:.3f} "
+        f"({result.n_evaluations} of {3 * 3 * 6 * 5 * 5} configurations evaluated)"
     )
-```
-
-### Server Runner (`RunNServer.py`)
-
-This script launches multiple server instances on different ports.
-
-```python
-import subprocess
-import sys
-
-processes = []
-
-for index in range(int(sys.argv[1])):
-    process = subprocess.Popen(["python", "server.py", str(5000 + index)])
-    processes.append(process)
-
-# Wait for all processes to finish
-for process in processes:
-    process.wait()
-```
-
-### Genetic Algorithm Execution (`main.py`)
-
-The main script initializes the genetic algorithm and evaluates the objective function asynchronously.
-
-```python
-import asyncio
-import sys
-import aiohttp
-import numpy as np
-from GeneOpt import GeneticAlgorithm, GeneticAlgorithmComparisonType, GeneticAlgorithmCacheType, Logger
-
-timeout = 60 * 30
-
-
-async def objective_func(port, **parameters):
-    """Objective function to evaluate parameters."""
-    url = f"http://127.0.0.1:{port}/run_objective"
-    while True:
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=parameters, timeout=timeout) as response:
-                    response.raise_for_status()
-                    res_json = await response.json()
-                    if res_json and res_json.get("data"):
-                        return float(res_json["data"])
-        except KeyboardInterrupt as e:
-            raise e
-        except Exception as e:
-            print(f"Error occurred: {e}, retrying...")
-            await asyncio.sleep(5)
-
-
-def run_async_objective_func(port, **parameters):
-    """Wrapper for running async objective function."""
-    return asyncio.run(objective_func(port=port, **parameters))
+    return result
 
 
 if __name__ == "__main__":
-    environment = {
-        "x1": np.linspace(-10, 10, 2 ** 12),
-        "x2": np.linspace(-10, 10, 2 ** 12)
-    }
-    genetic_algorithm = GeneticAlgorithm(
-        objective_func=run_async_objective_func,
-        comparison_type=GeneticAlgorithmComparisonType.minimize,
-        optimizer_name="test_op2",
-        environment=environment,
-        seed=42,
-        mutation_rate=0.06,
-        number_of_generations=100,
-        number_of_population=200,
-        r_cross=0.8,
-        start_number_of_population=200,
-        tournament_selection_number=4,
-        cache_type=GeneticAlgorithmCacheType.Ram,
-        verbose=1,
-        number_of_workers=int(sys.argv[1])
-    )
-    best, score = genetic_algorithm.start()
-    Logger.log_m("Done!")
-    Logger.log_m(f"{best} = {score}")
-    genetic_algorithm.plot()
+    logging.basicConfig(level=logging.INFO)
+    main()
 ```
 
-### Usage
+## Parameters
 
-1. **Start Servers**:
-   ```bash
-   python RunNServer.py <number_of_servers>
-   ```
+| Parameter | Default | Description |
+|---|---|---|
+| `objective_func` | required | called as `objective_func(**params)`, returns a number. `NaN` is rejected; `±inf` is allowed |
+| `environment` | required | `{name: values}`; names must be valid identifiers |
+| `optimizer_name` | `"geneopt"` | names the cache file and the plot directory |
+| `maximize` | `True` | `False` to minimise |
+| `population_size` | `100` | individuals per generation |
+| `generations` | `100` | maximum number of generations |
+| `crossover_probability` | `0.9` | chance that two selected parents recombine. If they don't, the children start as copies of the parents. |
+| `mutation_rate` | `0.05` | chance, for each gene of each child, that the gene is replaced by a different random value from its list. `"auto"` uses 1 / (number of parameters). |
+| `tournament_size` | `3` | candidates per tournament selection |
+| `elitism` | `1` | best distinct genomes copied unchanged into the next generation |
+| `early_stopping_rounds` | `None` | stop after this many generations without improvement |
+| `target_score` | `None` | stop once the best score reaches this value |
+| `cache_dir` | `None` | directory for the on-disk cache; `None` keeps it in memory |
+| `objective_version` | `None` | bump to invalidate the disk cache when the objective changes in ways the code hash can't see |
+| `executor` | `None` | a `concurrent.futures.Executor` to evaluate each generation in parallel |
+| `on_error` | `"raise"` | `"raise"`, `"worst"` (score failures as the worst value, uncached) or `"retry"` |
+| `max_retries` | `2` | extra attempts per evaluation with `on_error="retry"` (backoff 0.5 s, 1 s, 2 s, ...) |
+| `seed` | `0` | random seed; the same seed gives the same run with or without an executor |
+| `callback` | `None` | called after each generation with a `GenerationStats`; return `True` to stop (see *Progress and custom stopping*) |
 
-2. **Run Genetic Algorithm**:
-   ```bash
-   python main.py <number_of_servers>
-   ```
+Everything after `environment` is keyword-only.
 
-### Example Workflow
+**How a child is made**
 
-- Start 4 servers:
-  ```bash
-  python RunNServer.py 4
-  ```
+1. **Select** two parents, each the winner of a tournament of `tournament_size` random
+   individuals.
+2. **Recombine** with probability `crossover_probability`: for every gene separately, a fair
+   coin decides which parent child 1 takes it from, and child 2 takes it from the other parent.
+   The coin is always fair (50/50) so neither parent is favoured; this isn't a setting.
+3. **Mutate** every gene of both children with probability `mutation_rate`.
 
-- Run the genetic algorithm using these servers:
-  ```bash
-  python main.py 4
-  ```
+With the default 0.05, a child with 20 parameters gets one mutation on average, and one with
+100 parameters gets five. For about one mutation per child whatever the number of parameters,
+pass `mutation_rate="auto"`, which uses 1 / (number of parameters).
 
-### Outputs
+## Caching
 
-1. **Optimized Solution**: Logs the best solution and its fitness score.
-2. **Plots**: Visualizations saved to the `./cache/` directory.
+Every genome is evaluated at most once per run, and duplicates inside a generation are evaluated
+once. With `cache_dir`, scores are appended to `{cache_dir}/{optimizer_name}-{fingerprint}.jsonl`
+and reused by later runs. The fingerprint covers the environment's values and the objective's code,
+so changing either starts a fresh cache instead of returning stale scores. The code hash only sees
+the objective's own body; if it calls other functions that change, pass a new `objective_version`.
 
-This distributed setup allows GeneOpt to scale across multiple servers, making it ideal for resource-intensive optimization tasks.
+## Parallel evaluation
 
-## Configuration Parameters
+Pass any executor. Results are consumed in submission order, so the run is identical to a
+sequential one with the same seed. Use a `ProcessPoolExecutor` for CPU-bound Python objectives
+(the objective must then be importable, i.e. defined at module level).
 
-| Parameter                     | Description                                                                                 |
-|-------------------------------|---------------------------------------------------------------------------------------------|
-| `objective_func`              | The fitness function to optimize.                                                           |
-| `comparison_type`             | Either `maximize` or `minimize` to specify optimization goal.                               |
-| `optimizer_name`              | Name for the optimizer instance.                                                            |
-| `environment`                 | Dictionary defining the search space for variables.                                         |
-| `seed`                        | Random seed for reproducibility.                                                            |
-| `mutation_rate`               | Probability of mutation in the population.                                                  |
-| `number_of_generations`       | Number of generations to evolve.                                                            |
-| `number_of_population`        | Total size of the population.                                                               |
-| `r_cross`                     | Probability of crossover between individuals.                                               |
-| `start_number_of_population`  | Initial population size.                                                                    |
-| `tournament_selection_number` | Number of candidates in tournament selection.                                               |
-| `cache_type`                  | Choose `Ram` or `HardDisk` for caching.                                                     |
-| `verbose`                     | Verbosity level for logging (-1 for no logging, 0 for minimal, up to 3 for maximum detail). |
-| `number_of_workers`           | Number of worker servers (default is -1, meaning no workers are used).                      |
+```python
+from concurrent.futures import ThreadPoolExecutor
 
-## Requirements
+from geneopt import GeneticAlgorithm
 
-- Python 3.6 or higher
-- NumPy
-- Matplotlib
-- Seaborn
-- CatBoost (optional for feature analysis)
+
+def sphere(x, y):
+    return x * x + y * y
+
+
+environment = {"x": list(range(-50, 51)), "y": list(range(-50, 51))}
+with ThreadPoolExecutor(max_workers=4) as pool:
+    result = GeneticAlgorithm(
+        sphere, environment, maximize=False, generations=20, population_size=20, executor=pool
+    ).start()
+print(result.params, result.score)
+```
+
+### Objective servers over HTTP
+
+`examples/distributed_http/` runs the objective in separate server processes (or machines) and
+lets each executor thread borrow a free server:
+
+```bash
+cd examples/distributed_http
+pip install flask
+python run_servers.py 4        # servers on ports 5000-5003
+python client.py 4             # the genetic algorithm, 4 evaluations at a time
+```
+
+The servers listen on `127.0.0.1` with debug mode off. To spread them over several machines, run
+`server.py` behind a WSGI server on a private network; the endpoint has no authentication.
+
+## Logging
+
+GeneOpt logs to the `geneopt` logger and installs no handlers: one INFO line per generation and a
+summary, DEBUG per evaluation, WARNING for failures scored as worst.
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("geneopt").setLevel(logging.DEBUG)
+```
+
+## Plots
+
+`ga.plot(output_dir=None, dpi=150)` writes PNGs to `{cache_dir}/{optimizer_name}-plots/` (or
+`./{optimizer_name}-plots/`) and returns `{name: path or exception}`; one failing plot never stops
+the others. Images below are from the quickstart.
+
+| | |
+|---|---|
+| ![Best score](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/best_score.png) | ![Best x1](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/param_x1.png) |
+| Best so far, generation best and median | Best value of each parameter |
+| ![Diversity](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/diversity.png) | ![Gene frequencies](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/gene_freq_x1.png) |
+| Mean gene disagreement in the population | Share of the population holding each value |
+| ![Cache hits](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/cache_hit_rate.png) | ![Correlation with score](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/corr_with_score.png) |
+| Share of each generation served from cache | Spearman correlation of numeric params with score |
+| ![Correlation matrix](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/corr_matrix.png) | ![Predicted vs actual](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/predicted_vs_actual.png) |
+| Correlation between parameters | CatBoost fit of score on parameters (`[analysis]`) |
+| ![Feature importance](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/feature_importance.png) | ![Histogram](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/hist_x1.png) |
+| CatBoost feature importance (`[analysis]`) | Distribution of evaluated values |
+| ![Regression](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/regression_x2.png) | ![Pair scatter](https://raw.githubusercontent.com/erfanmhat/GeneOpt/master/docs/images/scatter_x1_x2.png) |
+| Parameter vs score with a linear fit | Parameter pairs coloured by score |
+
+Feature plots use the unique evaluated points with finite scores and numeric parameters only.
+
+## Benchmarks
+
+GeneOpt is benchmarked against PyGAD, DEAP, pymoo, Optuna, Nevergrad and random search on two
+standard suites with randomised instances: COCO **bbob-mixint** (mixed-integer) and IOHprofiler
+**PBO** (binary). In the first run (2026-10-16), GeneOpt ranked first among the libraries on PBO and
+mid-field on bbob-mixint, where DEAP and pymoo lead on smooth landscapes. The [full report](https://github.com/erfanmhat/GeneOpt/blob/master/docs/benchmarks/2026-10-16-fair-suite.md)
+has the configuration, figures and statistics; [spec 015](https://github.com/erfanmhat/GeneOpt/blob/master/specs/015-fair-benchmark-suite.md)
+explains the method.
+
+## Upgrading from 1.x
+
+2.0.0 is a hard break: every 1.x parameter, module and helper was removed, without
+compatibility shims. 1.x cache files are ignored. The complete list is in
+[specs/011-removed-in-2.0.md](specs/011-removed-in-2.0.md).
 
 ## License
 
-This project is licensed under the MIT License. Feel free to use, modify, and contribute.
-
----
-
-Happy optimizing with GeneOpt! 🚀
+MIT
