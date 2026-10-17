@@ -12,7 +12,7 @@ Owner instruction (2026-10-17): finish all open items before releasing 2.0.0. Th
 - [x] Task 2: Test the objective-without-signature fallback in `core.py`
 - [x] Task 3: `History` stores genomes as `int32` and gets `save(path)` / `History.load(path)` (spec 002 §1)
 - [x] Task 4: `callback` progress hook with `GenerationStats`; returning True stops the run (spec 005 §5)
-- [ ] Task 5: Spec 016 figures: `tests/bench/plots.py` (palette, ECDF, performance profile,
+- [x] Task 5: Spec 016 figures: `tests/bench/plots.py` (palette, ECDF, performance profile,
       Pareto), with hand-computed tests and every *Missing data* rule
 - [ ] Task 6: Spec 016 harness: `run.py` writes PDF + PNG and embeds them; `--plots-only DIR`
 - [ ] Task 7: Spec 016 checks. Cross-check our ECDF data against `cocopp` on the 015 run;

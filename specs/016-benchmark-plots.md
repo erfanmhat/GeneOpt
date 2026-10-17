@@ -108,10 +108,17 @@ def palette(algorithms: Iterable[str]) -> dict[str, Style]: ...   # shared by al
   dependency.
 
 ### Shared style: `palette`
-- Each algorithm gets a fixed colour, marker and line style, assigned from its **sorted** name, so
-  it looks the same in all three figures and across reports. Colours come from Okabe–Ito (8,
-  colour-blind safe), then `tab20` for more. Line styles cycle so the figures still read in
-  greyscale.
+- **Hue = library, line style = variant** (revised while building: 9 report rows would otherwise
+  need generated hues, and the dataviz rules forbid cycling categorical colours).
+  - **Fixed hue order:** each library has a fixed hue that doesn't depend on which libraries are
+    present.
+  - **The palette:** Okabe–Ito, with Tol's wine (#882255) replacing yellow, which failed the
+    lightness band.
+  - **Validated by script, not by eye:** all-pairs colour-blind ΔE is at least 7.6. That's in the
+    6–8 band, so every library also has its own marker.
+  - **Random search** is the neutral grey baseline.
+  - **Variants:** a library's main row is solid, its other rows dashed or dotted. GeneOpt's three
+    rows share its hue.
 - `geneopt*` rows are drawn thicker and on top, since GeneOpt is the subject of the report.
 - Output: each function returns a `matplotlib.figure.Figure` (OO API, no pyplot state, like
   `geneopt/plots.py`). The harness saves each as **PDF (vector) and PNG (200 dpi)** under
