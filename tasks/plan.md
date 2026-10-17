@@ -10,7 +10,7 @@ Owner instruction (2026-10-17): finish all open items before releasing 2.0.0. Th
 - [x] Task 1: Housekeeping. Refresh the specs/README status rows and spec 013, and add
       `bench-results/`, `exdata/` and `.coverage` to `.gitignore` (the PR #1 description moves to Task 8)
 - [x] Task 2: Test the objective-without-signature fallback in `core.py`
-- [ ] Task 3: `History` stores genomes as `int32` and gets `save(path)` / `History.load(path)` (spec 002 §1)
+- [x] Task 3: `History` stores genomes as `int32` and gets `save(path)` / `History.load(path)` (spec 002 §1)
 - [ ] Task 4: `callback` progress hook with `GenerationStats`; returning True stops the run (spec 005 §5)
 - [ ] Task 5: Spec 016 figures: `tests/bench/plots.py` (palette, ECDF, performance profile,
       Pareto), with hand-computed tests and every *Missing data* rule

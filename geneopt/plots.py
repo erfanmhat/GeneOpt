@@ -19,7 +19,13 @@ def gene_frequency_matrix(history, param: str) -> np.ndarray:
     j = list(history.environment).index(param)
     size = len(history.environment[param])
     bins = min(size, MAX_BINS)
-    return np.array([np.bincount(g[:, j] * bins // size, minlength=bins) / len(g) for g in history.genomes])
+    # int64 before multiplying: int32 genome indices times 64 bins overflow above ~33.5M values
+    return np.array(
+        [
+            np.bincount(g[:, j].astype(np.int64) * bins // size, minlength=bins) / len(g)
+            for g in history.genomes
+        ]
+    )
 
 
 def _figure():
