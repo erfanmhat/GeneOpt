@@ -69,7 +69,10 @@ def mixint(function: int, dim: int, instance: int, log_dir: Path, label: str = "
         return f, f
 
     def close():
+        # free the problem, then the suite: the problem's logger points into the suite's memory, so
+        # the suite must stay referenced until here (else COCO logs a garbage suite name)
         p.free()
+        suite.free()
         dat = next((folder / run).rglob("*.dat"), None)  # COCO writes no log before the first evaluation
         if dat is None:
             return None

@@ -37,6 +37,22 @@ def test_mixint_f_opt_comes_from_cocos_own_log(tmp_path):
     assert float(first[3]) - float(first[2]) == pytest.approx(f_opt)
 
 
+def test_mixint_keeps_its_suite_alive_until_finish(tmp_path):
+    # The problem's logger points into the cocoex.Suite's memory. Letting the suite be collected
+    # early made COCO write garbage suite names (991 of 1,080 .info files in the 2026-10-16 run),
+    # which cocopp then refuses to load.
+    import gc
+
+    for instance in (1, 2, 3):
+        p = suites.mixint(10, 10, instance, tmp_path / str(instance))
+        gc.collect()
+        churn = [bytes(1000) for _ in range(10_000)]  # reuse any freed memory
+        p.objective((0,) * 10)
+        p.finish()
+        del churn
+        assert b"suite = 'bbob-mixint'" in next((tmp_path / str(instance)).rglob("*.info")).read_bytes()
+
+
 def test_mixint_runs_log_to_separate_folders(tmp_path):
     for inst in (1, 2):
         p = suites.mixint(1, 10, inst, tmp_path)
