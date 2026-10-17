@@ -50,7 +50,7 @@ def objective(x):
 
 
 def test_public_names():
-    assert geneopt.__all__ == ["GeneticAlgorithm", "Result", "History", "__version__"]
+    assert geneopt.__all__ == ["GeneticAlgorithm", "GenerationStats", "Result", "History", "__version__"]
     assert geneopt.Result is Result and geneopt.History is History
 
 
@@ -142,3 +142,40 @@ def test_objective_without_an_inspectable_signature_skips_the_call_check():
         inspect.signature(Opaque())
     r = GeneticAlgorithm(Opaque(), {"x": [1, 2, 3], "y": [4, 5]}, population_size=6, generations=3).start()
     assert r.params == {"x": 3, "y": 5}
+
+
+# --- spec 005 §5: progress callback ---------------------------------------------
+
+
+def test_callback_sees_every_generation():
+    from geneopt import GenerationStats
+
+    seen = []
+    r = GeneticAlgorithm(
+        lambda x: -abs(x - 7), {"x": list(range(20))}, population_size=8, generations=5, callback=seen.append
+    ).start()
+    assert [s.generation for s in seen] == [0, 1, 2, 3, 4] and all(
+        isinstance(s, GenerationStats) for s in seen
+    )
+    assert [s.best_score for s in seen] == sorted(s.best_score for s in seen)  # best so far, maximising
+    last = seen[-1]
+    assert (last.best_params, last.best_score) == (r.params, r.score)
+    assert (last.n_evaluations, last.n_cache_hits) == (r.n_evaluations, r.n_cache_hits)
+    assert all(s.generation_best <= s.best_score for s in seen) and last.elapsed > 0
+
+
+def test_callback_returning_true_stops_the_run():
+    ga = GeneticAlgorithm(
+        lambda x: x,
+        {"x": list(range(50))},
+        population_size=6,
+        generations=50,
+        callback=lambda s: s.generation == 2,
+    )
+    r = ga.start()
+    assert r.stopped_by == "callback" and len(ga.history) == 3
+
+
+def test_callback_must_be_callable():
+    with pytest.raises(TypeError, match="callback"):
+        GeneticAlgorithm(objective, ENV, callback=42)

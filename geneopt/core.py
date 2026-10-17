@@ -18,7 +18,20 @@ from .history import History
 
 log = logging.getLogger("geneopt")
 
-StopReason = Literal["generations", "early_stopping", "target_score"]
+StopReason = Literal["generations", "early_stopping", "target_score", "callback"]
+
+
+@dataclass(frozen=True, slots=True)
+class GenerationStats:
+    """Passed to ``callback`` after each generation is scored. Counts are cumulative."""
+
+    generation: int
+    best_params: dict[str, Any]  # best so far
+    best_score: float  # best so far
+    generation_best: float  # best of this generation only
+    n_evaluations: int
+    n_cache_hits: int
+    elapsed: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +144,7 @@ class GeneticAlgorithm:
         on_error: Literal["raise", "worst", "retry"] = "raise",
         max_retries: int = 2,
         seed: int | None = 0,
+        callback: Callable[[GenerationStats], bool | None] | None = None,
     ) -> None:
         if not callable(objective_func):
             raise TypeError(f"objective_func must be callable, got {objective_func!r}")
@@ -159,6 +173,8 @@ class GeneticAlgorithm:
         )
         _check("on_error", on_error, on_error in ("raise", "worst", "retry"), "'raise', 'worst' or 'retry'")
         _check("max_retries", max_retries, max_retries >= 0, ">= 0")
+        if callback is not None and not callable(callback):
+            raise TypeError(f"callback must be callable or None, got {callback!r}")
         if executor is not None and not callable(getattr(executor, "submit", None)):
             raise TypeError(f"executor must be a concurrent.futures.Executor, got {executor!r}")
         try:
@@ -187,6 +203,7 @@ class GeneticAlgorithm:
         self._early_stopping_rounds = early_stopping_rounds
         self._target_score = target_score
         self._seed = seed
+        self._callback = callback
         self._executor = executor
         self._on_error = on_error
         self._retries = max_retries if on_error == "retry" else 0
@@ -315,6 +332,19 @@ class GeneticAlgorithm:
                 sum(hits),
             )
 
+            if self._callback is not None:
+                stats = GenerationStats(
+                    generation=generation,
+                    best_params=self._decode(best_key),
+                    best_score=float(self._sign * best_signed),
+                    generation_best=float(self._sign * signed[i]),
+                    n_evaluations=n_evaluations,
+                    n_cache_hits=n_cache_hits,
+                    elapsed=time.perf_counter() - started,
+                )
+                if self._callback(stats) is True:
+                    stopped_by = "callback"
+                    break
             if self._target_score is not None and best_signed >= self._sign * self._target_score:
                 stopped_by = "target_score"
                 break
