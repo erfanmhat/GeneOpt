@@ -1,48 +1,28 @@
-# Implementation Plan: spec 015 — fair benchmark suite
+# Implementation Plan: everything before the 2.0.0 release
 
-(Earlier plans for specs 011, 007, 012 and 014 are complete; see git history of this file.)
+(Earlier plans for specs 011, 007, 012, 014 and 015 are complete; see git history of this file.)
 
-## Overview
-
-Add COCO bbob-mixint and IOHprofiler PBO to the benchmark harness. Every run records an
-anytime trace of precision. The report scores precision against targets, checks for head
-starts, ranks the optimisers and applies the new gate. CI shards the work, and one local run at
-CI scope produces the first committed report.
-
-## Architecture decisions
-
-- **New module `tests/bench/suites.py`** builds problems from `cocoex` and `ioh` and computes
-  precision. `run.py` keeps the adapters, the Budget wrapper and the CLI. It grows a `--suite`
-  switch, with `legacy` the old three problems.
-- **One record per run** (JSON line): suite, function, D, instance, optimiser label, seed, the
-  GeneOpt config, unique evaluations, seconds, error, raw best values, and the trace as
-  `(evaluation, best raw value)` at each improvement. Precision is computed at **report time**,
-  because PBO references (`max(stated, best observed)`) need all runs. Shards therefore just
-  write records, and `--report-only DIR` merges them.
-- **The GeneOpt configuration is a literal table** keyed by (suite, D): main row 1/D plus
-  sensitivity rows 0.5/D and 2/D, with every operator parameter written out. Labels are
-  `geneopt[mr=1/D]` etc.
-- **Seeds:** the instance id is the seed (one run per optimiser and problem, as COCO does).
-- **Tests needing `cocoex`/`ioh`** use `pytest.importorskip`. They run in `bench.yml`, which
-  installs the bench requirements. Core CI stays numpy-only, and pure scoring tests run there.
-- Figures are 016's. `cocopp` isn't added here.
+Owner instruction (2026-10-17): finish all open items before releasing 2.0.0. The release itself
+(merge PR #1, push the `v2.0.0` tag, which publishes to PyPI) still waits for the owner's explicit go.
 
 ## Task list
 
-- [x] Task 1: `suites.py`: problems, cardinalities, f_opt from COCO logs, IOH internal values
-- [x] Task 2: per-run records with anytime traces, GeneOpt config table, vectorised Nevergrad
-- [x] Task 3: scoring and report: targets, references, head-start check, ranks, Wilcoxon, ECDF area, gate
-- [x] Task 4: CLI (`--suite/--dims/--instances/--functions/--out-dir/--report-only`), sharded `bench.yml`
-- [x] Task 5: local run at CI scope, committed dated report; specs 007/013/015/README updated
+- [ ] Task 1: Housekeeping. Refresh the PR #1 description, the specs/README status rows, and
+      `.gitignore` (`bench-results/`, `exdata/`)
+- [ ] Task 2: Test the objective-without-signature fallback in `core.py`
+- [ ] Task 3: `History` stores genomes as `int32` and gets `save(path)` / `History.load(path)` (spec 002 §1)
+- [ ] Task 4: `callback` progress hook with `GenerationStats`; returning True stops the run (spec 005 §5)
+- [ ] Task 5: Spec 016 figures: `tests/bench/plots.py` (palette, ECDF, performance profile,
+      Pareto), with hand-computed tests and every *Missing data* rule
+- [ ] Task 6: Spec 016 harness: `run.py` writes PDF + PNG and embeds them; `--plots-only DIR`
+- [ ] Task 7: Spec 016 checks. Cross-check our ECDF data against `cocopp` on the 015 run;
+      greyscale and 3.5 in readability; figures added to the 2026-10-16 report
+- [ ] Task 8: Docs. README, CHANGELOG, spec statuses (002, 005, 016, README map); push; CI green
+
+### Not in this plan: needs an owner decision
+- Local refinement (spec 012). It would add a non-standard operator, which reverses the
+  "standard operators" decision. Options go to the owner after Task 8.
 
 ### Checkpoint
-- [x] `pytest -q` (core env, and bench env with `--bench`), ruff, mypy
-- [x] Spec 015 acceptance boxes ticked, or explained where the run says otherwise
-- [x] Pushed; CI green on PR #1
-
-## Risks
-| Risk | Mitigation |
-|---|---|
-| Local CI-scope run is long (Optuna ≈ 9 CPU-h on PBO) | 12 processes; run in the background; per-run records survive interruption |
-| A competitor crashes on a new suite | recorded as `error` in its record, reported, never aborts the run |
-| The gate fails | it's a finding: reported as is, then I stop and ask before changing anything |
+- [ ] `pytest -q` (core, plots and bench envs), ruff, mypy, coverage gate
+- [ ] PR #1 CI green; no benchmark run on GitHub Actions (local only)
