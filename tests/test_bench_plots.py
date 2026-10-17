@@ -176,3 +176,9 @@ def test_every_figure_saves_as_pdf_and_png(tmp_path):
     for name, fig in plots.figures(runs).items():
         written = plots.save(fig, tmp_path / name)
         assert [p.suffix for p in written] == [".pdf", ".png"] and all(p.stat().st_size > 0 for p in written)
+
+
+def test_profile_when_nobody_reaches_the_target():
+    runs = plots.validate(frame([row("a", 1, 1, 0.01, None), row("b", 1, 1, 0.01, None)]))
+    fig = plots.plot_performance_profile(runs)
+    assert "1 of 1 problems unsolved by all" in fig.axes[0].get_title()

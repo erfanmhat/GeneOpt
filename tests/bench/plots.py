@@ -202,7 +202,9 @@ def plot_performance_profile(runs: pd.DataFrame, *, target: float | None = None,
     target = _pick_target(runs, target)
     ratios, excluded = profile_ratios(runs, target)
     counts, styles = completeness(runs), palette(runs["algorithm"])
-    finite = np.concatenate([r[np.isfinite(r)] for r in ratios.values()] or [np.array([1.0])])
+    finite = np.concatenate(
+        [np.array([1.0]), *(r[np.isfinite(r)] for r in ratios.values())]
+    )  # nobody solved: 1
     tau_max = tau_max or 2 * max(float(finite.max()), 1.0)
     fig, (ax,) = _figure(1, width)
     for alg, r in sorted(ratios.items(), key=lambda kv: -rho(kv[1], tau_max)):

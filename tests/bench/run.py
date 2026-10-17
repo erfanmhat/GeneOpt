@@ -489,19 +489,52 @@ def main_fair(args) -> int:
             name = f"{record['optimiser'].replace('/', '_')}_i{record['instance']}.jsonl"
             with open(folder / name, "a") as fh:
                 fh.write(json.dumps(record) + "\n")
-    _write(score.report(records, _header(args.suite)), args.out)
+    text = score.report(records, _header(args.suite))
+    _write(text + _figures(records, Path(args.out_dir) / args.suite, args.out), args.out)
     return 1 if score.gate(score.score(records)) else 0
+
+
+def _load(folder: str) -> list[dict]:
+    return [json.loads(line) for path in sorted(Path(folder).rglob("*.jsonl")) for line in path.open()]
+
+
+def _figures(records: list[dict], root: Path, report: str | None) -> str:
+    """Spec 016: write each suite's figures to root/figures/<suite>-<name>.{pdf,png}; return a
+    Markdown section embedding the PNGs, with paths relative to the report file."""
+    try:
+        import matplotlib  # noqa: F401
+        import pandas as pd
+        import plots
+    except ImportError:  # figures are optional: the report and the gate don't need them
+        return "\n\n*Figures skipped: they need matplotlib and pandas (`pip install GeneOpt[plots]`).*"
+    import score
+
+    rows = pd.DataFrame(score.runs_rows(records))
+    if rows.empty:
+        return ""
+    base = Path(report).resolve().parent if report else Path.cwd()
+    lines = ["", "", "## Figures"]
+    for suite, part in rows.groupby("suite"):
+        lines += ["", f"### {suite}", ""]
+        for name, fig in plots.figures(part).items():
+            png = plots.save(fig, root / "figures" / f"{suite}-{name}")[1]
+            lines.append(f"![{suite} {name}]({Path(os.path.relpath(png.resolve(), base)).as_posix()})")
+    return "\n".join(lines)
 
 
 def main_report(args) -> int:
     import score
 
-    records = [
-        json.loads(line) for path in sorted(Path(args.report_only).rglob("*.jsonl")) for line in path.open()
-    ]
+    records = _load(args.report_only)
     suite = ", ".join(sorted({r["suite"] for r in records}))
-    _write(score.report(records, _header(suite)), args.out)
+    text = score.report(records, _header(suite))
+    _write(text + _figures(records, Path(args.report_only), args.out), args.out)
     return 1 if score.gate(score.score(records)) else 0
+
+
+def main_plots(args) -> int:
+    print(_figures(_load(args.plots_only), Path(args.plots_only), None).strip())
+    return 0
 
 
 def main(argv=None) -> int:
@@ -515,6 +548,9 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--report-only", metavar="DIR", help="merge the *.jsonl records under DIR into one report"
     )
+    ap.add_argument(
+        "--plots-only", metavar="DIR", help="rebuild the figures from the *.jsonl records under DIR"
+    )
     ap.add_argument("--seeds", type=int, default=30, help="legacy only")
     ap.add_argument("--only", help="comma-separated optimisers ('geneopt' selects every GeneOpt row)")
     ap.add_argument("--problems", default=",".join(PROBLEMS), help="legacy only: comma-separated problems")
@@ -524,6 +560,8 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.report_only:
         return main_report(args)
+    if args.plots_only:
+        return main_plots(args)
     if args.suite != "legacy":
         return main_fair(args)
     args.only = args.only or ",".join(OPTIMISERS)

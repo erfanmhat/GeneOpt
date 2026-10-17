@@ -121,6 +121,9 @@ def test_fair_suite_runs_end_to_end(tmp_path, capsys, suite, dims, function):
     # (three GeneOpt rows + random) x 2 instances: one file each, so CI shards never overwrite each other
     assert len(list((tmp_path / suite / "records").glob("*.jsonl"))) == 8
     assert "crashed" not in capsys.readouterr().out.lower()
+    for name in ("ecdf", "profile", "pareto"):  # spec 016: PDF + PNG, embedded in the report
+        assert (tmp_path / suite / "figures" / f"{suite}-{name}.pdf").exists()
+        assert f"]({suite}/figures/{suite}-{name}.png)" in text
 
 
 @pytest.mark.bench
@@ -140,4 +143,20 @@ def test_report_only_on_shards_equals_one_combined_run(tmp_path):
     for only in ("geneopt", "random"):
         bench.main([*common, "--only", only, "--out-dir", str(tmp_path / "shards" / only)])
     bench.main(["--report-only", str(tmp_path / "shards"), "--out", str(tmp_path / "merged.md")])
-    assert (tmp_path / "merged.md").read_text() == (tmp_path / "all.md").read_text()
+
+    def body(name):  # figure paths differ between the two runs by design; the rest must not
+        return (tmp_path / name).read_text().split("## Figures")[0]
+
+    assert body("merged.md") == body("all.md")
+    assert (tmp_path / "shards" / "figures" / "mixint-ecdf.png").exists()
+
+
+@pytest.mark.bench
+def test_plots_only_rebuilds_figures_from_saved_records(tmp_path):
+    bench.main(["--suite", "mixint", "--dims", "10", *SMOKE, "--only", "random", "--out-dir", str(tmp_path)])
+    for f in (tmp_path / "mixint" / "figures").iterdir():
+        f.unlink()
+    assert bench.main(["--plots-only", str(tmp_path / "mixint")]) == 0
+    assert sorted(f.name for f in (tmp_path / "mixint" / "figures").iterdir()) == [
+        f"mixint-{n}.{ext}" for n in ("ecdf", "pareto", "profile") for ext in ("pdf", "png")
+    ]
