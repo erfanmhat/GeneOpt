@@ -39,11 +39,12 @@ class History:
 - The engine (004) appends one entry per generation **after** scoring, so cache hits are
   recorded like any other individual. That fixes H-1.
 - Memory: `gens × pop × n_params × 8 B`. 1,000 × 1,000 × 20 = 160 MB is the ceiling to
-  document. *(not built yet)* Storing `int32` when every env size is < 2³¹ would halve it.
+  document. *(built 2026-10-17)* Genomes are stored as `int32`, which halves it. `gene_frequency_matrix`
+  widens to `int64` before multiplying, so values above ~33.5M per parameter can't overflow.
 - `to_frame()` → long DataFrame `(generation, individual, <param values…>, score, cache_hit)`
   for anyone who wants pandas. It's built on demand, never stored.
-- *(not built yet)* `save(path)` → `np.savez_compressed`. It's opt-in, so runs don't write files
-  unless asked.
+- *(built 2026-10-17)* `save(path)` → `np.savez_compressed`, without pickle (the environment is
+  stored as JSON), and `History.load(path)`. It's opt-in, so runs don't write files unless asked.
 
 The evaluated-points table that feature analysis needs is just the cache (001), exposed as
 `ga.evaluations()` → DataFrame `(<param values…>, score)`. It's a different question ("what does the

@@ -68,11 +68,35 @@ if __name__ == "__main__":
 | `n_evaluations` | objective calls made in this run (cache misses) |
 | `n_cache_hits` | individuals served from the cache |
 | `elapsed` | wall time in seconds |
-| `stopped_by` | `"generations"`, `"early_stopping"` or `"target_score"` |
+| `stopped_by` | `"generations"`, `"early_stopping"`, `"target_score"` or `"callback"` |
 
 After `start()`, `ga.history` holds every generation's genomes, scores and cache hits
 (`ga.history.to_frame()` gives a long DataFrame), and `ga.evaluations()` gives the unique
-evaluated points.
+evaluated points. `ga.history.save("run.npz")` writes it to a compressed file without pickle, and
+`History.load("run.npz")` reads it back; parameter values must be JSON values (numbers, strings,
+booleans, `None`) to be saved.
+
+### Progress and custom stopping
+
+`callback` is called after each generation with a `GenerationStats`: `generation`, `best_params`
+and `best_score` (best so far), `generation_best`, `n_evaluations` and `n_cache_hits` (so far) and
+`elapsed`. Returning `True` stops the run with `stopped_by="callback"`. It's the hook for progress
+bars, time limits, dashboards or checkpoints.
+
+```python
+from geneopt import GeneticAlgorithm
+
+
+def progress(stats):
+    print(f"generation {stats.generation}: best {stats.best_score:.3g}, {stats.n_evaluations} evaluations")
+    return stats.best_score >= 0.99 or stats.elapsed > 60  # True stops the run
+
+
+ga = GeneticAlgorithm(
+    lambda x: x / 100, {"x": range(101)}, population_size=20, generations=50, callback=progress
+)
+print(ga.start().stopped_by)
+```
 
 ## Categorical and mixed spaces
 
@@ -150,6 +174,7 @@ if __name__ == "__main__":
 | `on_error` | `"raise"` | `"raise"`, `"worst"` (score failures as the worst value, uncached) or `"retry"` |
 | `max_retries` | `2` | extra attempts per evaluation with `on_error="retry"` (backoff 0.5 s, 1 s, 2 s, ...) |
 | `seed` | `0` | random seed; the same seed gives the same run with or without an executor |
+| `callback` | `None` | called after each generation with a `GenerationStats`; return `True` to stop (see *Progress and custom stopping*) |
 
 Everything after `environment` is keyword-only.
 
@@ -247,6 +272,15 @@ the others. Images below are from the quickstart.
 | Parameter vs score with a linear fit | Parameter pairs coloured by score |
 
 Feature plots use the unique evaluated points with finite scores and numeric parameters only.
+
+## Benchmarks
+
+GeneOpt is benchmarked against PyGAD, DEAP, pymoo, Optuna, Nevergrad and random search on two
+standard suites with randomised instances: COCO **bbob-mixint** (mixed-integer) and IOHprofiler
+**PBO** (binary). In the first run (2026-10-16), GeneOpt ranked first among the libraries on PBO and
+mid-field on bbob-mixint, where DEAP and pymoo lead on smooth landscapes. The [full report](https://github.com/erfanmhat/GeneOpt/blob/master/docs/benchmarks/2026-10-16-fair-suite.md)
+has the configuration, figures and statistics; [spec 015](https://github.com/erfanmhat/GeneOpt/blob/master/specs/015-fair-benchmark-suite.md)
+explains the method.
 
 ## Upgrading from 1.x
 

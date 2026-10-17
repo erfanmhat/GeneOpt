@@ -23,7 +23,15 @@ The bugs fixed are listed in [specs/README.md](specs/README.md).
 - One evaluation loop: per-generation dedupe, any `concurrent.futures` executor, `on_error` policy.
 - Plots are built from a full per-generation `History` and written with descriptive names.
 - Logging uses the standard `geneopt` logger, with no files written.
+- `History` stores genomes as `int32` (half the memory) and can be saved and loaded:
+  `history.save(path)` / `History.load(path)`, a compressed `.npz` without pickle.
 - Core dependency is numpy only. Plots and analysis are extras. Python 3.10+.
+
+### Added
+- `callback`: called after each generation with a `GenerationStats`; returning `True` stops the run
+  (`stopped_by="callback"`).
+- A benchmark suite against other libraries on COCO bbob-mixint and IOHprofiler PBO, with a
+  committed report (`docs/benchmarks/`).
 
 ### Removed
 - 1.x caches (`{name}.csv`/`{name}.json`) are ignored, not migrated.

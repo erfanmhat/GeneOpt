@@ -48,6 +48,7 @@ GeneticAlgorithm(
     on_error: Literal["raise", "worst", "retry"] = "raise",
     max_retries: int = 2,
     seed: int | None = 0,
+    callback: Callable[[GenerationStats], bool | None] | None = None,  # §5
 )
 ```
 
@@ -96,7 +97,9 @@ log = logging.getLogger("geneopt")
 `callback: Callable[[GenerationStats], bool | None] | None = None`. It's called once per
 generation, and returning `True` stops the run. That covers tqdm bars, custom stopping,
 checkpoint-to-cloud and live dashboards without the library owning any of them. It's one
-`if` in the loop. Skip it if nobody asks.
+`if` in the loop. *(Built 2026-10-17: `GenerationStats` has `generation`, `best_params`,
+`best_score`, `generation_best`, `n_evaluations`, `n_cache_hits` and `elapsed`. Returning `True` sets
+`stopped_by="callback"`.)*
 
 ### 6. Module layout
 
