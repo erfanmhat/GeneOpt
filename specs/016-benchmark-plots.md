@@ -1,6 +1,6 @@
 # 016 — Benchmark Figures: ECDF, Performance Profile, Speed–Success Pareto
 
-**Status:** approved (2026-10-16) · **Severity:** 🟡 medium (reporting, not search) ·
+**Status:** implemented (2026-10-17); figures in the [2026-10-16 report](../docs/benchmarks/2026-10-16-fair-suite.md#figures) · **Severity:** 🟡 medium (reporting, not search) ·
 **Depends on:** 015 (the suite and its logs) · **Stack:** matplotlib + pandas (as `geneopt/plots.py`)
 
 ## Objective
@@ -202,13 +202,18 @@ test's comments:
   not picked per report).
 
 ## Success criteria
-- [ ] The three functions and `palette` exist in `tests/bench/plots.py` with the signatures above.
-- [ ] Hand-computed tests for each figure and for every *Missing data* row pass.
-- [ ] `run.py --suite … ` writes PDF + PNG for all three figures and embeds them in the report.
+- [x] The three functions and `palette` exist in `tests/bench/plots.py` with the signatures above
+      (plus a `width` argument, which sets the font size).
+- [x] Hand-computed tests for each figure and for every *Missing data* row pass. Coverage is 100%.
+- [x] `run.py --suite … ` writes PDF + PNG for all three figures and embeds them in the report.
       `--plots-only` rebuilds them from saved results.
-- [ ] On the 015 bbob-mixint run, our pooled ECDF agrees with `cocopp`'s within one step for every
-      algorithm (a sanity check that the data path is right).
-- [ ] Figures are readable in greyscale and at single-column width (3.5 in).
+- [x] On the 015 bbob-mixint run, our pooled ECDF agrees with `cocopp`'s within one step for every
+      algorithm: at most 1.2 percentage points, against a step of 1/51. Where they differ, COCO's
+      raw `.dat` log agrees with ours; see the report. This check also exposed a COCO log bug in
+      the harness, now fixed.
+- [x] Figures are readable in greyscale and at single-column width (3.5 in), checked by rendering:
+      fonts scale with `width`, the legend sits below the axes, every library has its own marker
+      on its lines, and Pareto labels are placed to avoid markers, error bars and each other.
 
 ## Resolved questions (owner, 2026-10-16)
 1. **ECDF x-axis:** evaluations / D (COCO/BBOB). Otherwise high dimensions, which need far more

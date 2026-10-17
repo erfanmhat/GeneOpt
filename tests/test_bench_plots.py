@@ -87,7 +87,7 @@ def test_ecdf_figure_has_one_panel_per_dimension_and_labels_gaps():
     runs = plots.validate(pd.concat([ecdf_runs(), frame([row("a", 1, 1, 1.0, 40, dim=20)])]))
     fig = plots.plot_ecdf(runs)
     assert len(fig.axes) == 2
-    labels = [t.get_text() for t in fig.axes[0].get_legend().get_texts()]
+    labels = [t.get_text() for t in fig.legends[0].get_texts()]  # one shared legend below the panels
     assert labels[0] == "a" and labels[1].startswith("b (1/2 runs")  # best final value first
     assert len(plots.plot_ecdf(runs, per_dimension=False).axes) == 1
 

@@ -15,7 +15,7 @@ Owner instruction (2026-10-17): finish all open items before releasing 2.0.0. Th
 - [x] Task 5: Spec 016 figures: `tests/bench/plots.py` (palette, ECDF, performance profile,
       Pareto), with hand-computed tests and every *Missing data* rule
 - [x] Task 6: Spec 016 harness: `run.py` writes PDF + PNG and embeds them; `--plots-only DIR`
-- [ ] Task 7: Spec 016 checks. Cross-check our ECDF data against `cocopp` on the 015 run;
+- [x] Task 7: Spec 016 checks. Cross-check our ECDF data against `cocopp` on the 015 run;
       greyscale and 3.5 in readability; figures added to the 2026-10-16 report
 - [ ] Task 8: Docs. README, CHANGELOG, spec statuses (002, 005, 016, README map); push; CI green
 

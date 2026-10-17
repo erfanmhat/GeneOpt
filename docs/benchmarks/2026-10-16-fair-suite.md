@@ -38,12 +38,25 @@ sensitivity rows. The *Configuration* and *Results* sections are generated from 
 - **Code:** branch `v2.0.0`. The runs used `cdce24c`. Later commits change only the report,
   thread settings and tests, not the runs.
 - **Seeds:** the instance id. One run per (optimiser, problem), as in COCO.
-- **Reproducibility (*analysis*):** four cells were rerun afterwards, from different suites and
-  GeneOpt rows. Their traces, final values and references were identical:
-  - bbob-mixint f15 i1 at 1/D;
-  - bbob-mixint f21 i3 at 0.5/D;
-  - PBO F24 i2 at 1/D;
-  - PBO F18 i4 at 2/D.
+- **Reproducibility (*analysis*):**
+  - **bbob-mixint:** the whole suite was rerun on 2026-10-17. All 1,080 records, competitors
+    included, were identical: traces, final values and references.
+  - **PBO:** two cells were rerun (F24 i2 at 1/D, F18 i4 at 2/D), and both were identical.
+- **Cross-check against COCO's tooling (*analysis*):** our evaluations-to-target were compared
+  with `cocopp` 2.9.1 on all 55,080 bbob-mixint (run, target) pairs.
+  - **Agreement:** 96.8% of pairs are identical.
+  - **The rest:** `cocopp` reports the hit later (1,277 pairs) or not at all (467). It never
+    reports one earlier, and never a hit we lack.
+  - **Who is right:** sampled cases checked against COCO's raw `.dat` log agree with our numbers.
+    For example, DEAP on f1 i1 has f − f_opt = 5.80 at evaluation 171, which is below the 6.31
+    target. The gap comes from `cocopp`'s handling of targets that sit exactly on its own grid:
+    nudge the target by 1e−5 relative and it gives our answer.
+  - **Effect:** the pooled ECDFs differ by at most 1.2 percentage points per algorithm, always in
+    the same direction. That's within one target step (1/51), and no ranking changes.
+- **COCO log bug, fixed after this run:** the harness let the `cocoex.Suite` object be freed
+  while its problem was still logging. 991 of the 1,080 COCO `.info` files therefore got a
+  garbage suite name, and `cocopp` refuses to load them. The objective values were unaffected:
+  the full rerun above, done with the fix, reproduced every record.
 - **Reproduce:**
   ```bash
   pip install -e . -r tests/bench/requirements.txt
@@ -182,6 +195,24 @@ The configuration is the same as above, with n = 64. Every gene has 2 values, th
 n = 64 (8.75) is beaten: the all-zeros string scores 10.35. For these three functions, precision
 is measured against the best value any optimiser found on that instance. So a 0 there means
 "best found in this experiment", not "proven optimum".
+
+## Figures
+
+Spec 016: ECDF over all (problem, target) pairs, Dolan–Moré performance profile, and speed against
+success at the 1e−2 target. In the Pareto plots the seconds come from a machine whose BLAS threads
+were oversubscribed during this run (fixed afterwards), so compare them only within this run.
+
+**bbob-mixint, D = 10**
+
+![bbob-mixint ECDF](2026-10-16/mixint-ecdf.png)
+![bbob-mixint performance profile](2026-10-16/mixint-profile.png)
+![bbob-mixint speed vs success](2026-10-16/mixint-pareto.png)
+
+**PBO, n = 64**
+
+![PBO ECDF](2026-10-16/pbo-ecdf.png)
+![PBO performance profile](2026-10-16/pbo-profile.png)
+![PBO speed vs success](2026-10-16/pbo-pareto.png)
 
 ## Budget used (*analysis*)
 
