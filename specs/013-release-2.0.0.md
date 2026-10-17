@@ -23,7 +23,8 @@ PyPI login.
       case-insensitive path check in a test) was fixed.
 
 ### On PyPI (owner only, one time, needs a login)
-- [ ] pypi.org → *Your projects* → **GeneOpt** → *Manage* → **Publishing** → *Add a new
+- [x] *(done by the owner, 2026-10-16; first proven when the publish job runs)*
+      pypi.org → *Your projects* → **GeneOpt** → *Manage* → **Publishing** → *Add a new
       publisher* → **GitHub**, with:
 
       | Field | Value |

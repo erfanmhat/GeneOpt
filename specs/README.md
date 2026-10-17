@@ -95,11 +95,11 @@ behaviour, so it ships with benchmark numbers against other optimisation librari
 
 | Item | Where | Notes |
 |---|---|---|
-| Operator parameter cleanup | [014](014-operator-parameters.md) | Done. 015 runs next, at the new defaults |
+| Operator parameter cleanup | [014](014-operator-parameters.md) | Done, including `mutation_rate="auto"` (1/D) |
 | Fair benchmark suite | [015](015-fair-benchmark-suite.md) | Done. First run: [report](../docs/benchmarks/2026-10-16-fair-suite.md), gate passes. GeneOpt 1/D ranks 4.42 on bbob-mixint, 3.00 on PBO |
 | Benchmark figures | [016](016-benchmark-plots.md) | Approved. Next stage: plots `score.runs_rows`, which 015 now provides |
 | Local refinement (fine-tuning near an optimum) | [012](012-crossover-mixing.md) | The 015 run shows the gap: DEAP/pymoo lead on smooth bbob-mixint functions, and 0.5/D helps there. Judge any change on the 015 suite |
-| PyPI publishing | [013](013-release-2.0.0.md) | CI is green on all 3 OSes (PR #1). Waiting on a one-time PyPI setting by the owner, then merge and tag |
+| PyPI publishing | [013](013-release-2.0.0.md) | CI green, trusted publisher added by the owner, 014 and 015 done. Waiting only for the owner's go to merge PR #1 and push the `v2.0.0` tag |
 | `History.save()` and `int32` genome storage | [002 §1](002-history-and-plots.md) | Marked *not built yet*. Nobody needs them so far |
 | Per-generation `callback` hook | [005 §5](005-public-api-and-logging.md) | Optional by design. Build it when someone asks |
 | Objectives without an inspectable signature | `core.py` validation | A 2-line fallback that skips the signature check. Untested, low risk |
