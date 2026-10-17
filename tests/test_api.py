@@ -127,3 +127,18 @@ def test_misspelled_parameter_fails_before_any_evaluation():
 def test_numpy_arrays_are_accepted_as_value_lists():
     r = GeneticAlgorithm(objective, {"x": np.linspace(0, 1, 5)}, generations=2, population_size=4).start()
     assert isinstance(r, Result)
+
+
+def test_objective_without_an_inspectable_signature_skips_the_call_check():
+    import inspect
+
+    class Opaque:
+        __signature__ = "not a Signature"  # inspect.signature() raises TypeError or ValueError (3.12+)
+
+        def __call__(self, **params):
+            return float(sum(params.values()))
+
+    with pytest.raises((TypeError, ValueError)):
+        inspect.signature(Opaque())
+    r = GeneticAlgorithm(Opaque(), {"x": [1, 2, 3], "y": [4, 5]}, population_size=6, generations=3).start()
+    assert r.params == {"x": 3, "y": 5}
