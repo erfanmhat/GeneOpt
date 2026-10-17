@@ -12,6 +12,7 @@ from collections import defaultdict
 
 from suites import TARGETS
 
+LOG_FLOOR = 1e-9  # below COCO's hardest target (1e-8): exact hits get a finite log10 precision
 SUCCESS_TARGET = 1e-2  # success rates, head-start check and the 016 figures (owner decision)
 GATE_SHARE = 0.9  # the main GeneOpt row must beat random search on this share of (function, D) pairs
 MAIN_ROW = "geneopt[mr=1/D]"
@@ -188,12 +189,13 @@ def gate(s: dict) -> list[str]:
     return failures
 
 
-def wilcoxon(s: dict, suite: str) -> list[tuple[str, int, int, int, float | None]]:
-    """Main row vs each optimiser over problem instances: (optimiser, wins, ties, losses, p)."""
+def paired(s: dict, suite: str) -> list[tuple[str, int, int, int, float | None, float | None]]:
+    """Main row vs each optimiser over problem instances: (optimiser, wins, ties, losses, sign-test p,
+    Wilcoxon p on log10 precision). Both are scale-free, so functions with large values don't dominate."""
     try:
-        from scipy.stats import wilcoxon as test
+        from scipy.stats import binomtest, wilcoxon
     except ImportError:  # p-values need the bench requirements; counts don't
-        test = None
+        binomtest = wilcoxon = None
     out = []
     keys = [k for k in s["per_instance"] if k[0] == suite]
     for o in s["optimisers"]:
@@ -202,13 +204,15 @@ def wilcoxon(s: dict, suite: str) -> list[tuple[str, int, int, int, float | None
         pairs = [(s["per_instance"][k][MAIN_ROW], s["per_instance"][k][o]) for k in keys]
         wins = sum(a < b for a, b in pairs)
         ties = sum(a == b for a, b in pairs)
-        finite = [(a, b) for a, b in pairs if math.isfinite(a) and math.isfinite(b) and a != b]
-        p = (
-            float(test([a for a, _ in finite], [b for _, b in finite]).pvalue)
-            if test and len(finite) >= 5
-            else None
-        )
-        out.append((o, wins, ties, len(pairs) - wins - ties, p))
+        sign_p = log_p = None
+        if binomtest and wilcoxon and wins + (len(pairs) - wins - ties):
+            sign_p = float(binomtest(wins, len(pairs) - ties).pvalue)
+            logs = [math.log10(max(a, LOG_FLOOR)) - math.log10(max(b, LOG_FLOOR)) for a, b in pairs]
+            logs = [
+                d for d in logs if math.isfinite(d) and d != 0
+            ]  # crashes (inf) count only in the sign test
+            log_p = float(wilcoxon(logs).pvalue) if len(logs) >= 5 else None
+        out.append((o, wins, ties, len(pairs) - wins - ties, sign_p, log_p))
     return out
 
 
@@ -287,12 +291,17 @@ def report(records, header: str = "") -> str:
         if MAIN_ROW in opts:
             lines += [
                 "",
-                f"{MAIN_ROW} against each optimiser, per problem instance (Wilcoxon signed-rank):",
+                f"{MAIN_ROW} against each optimiser, per problem instance: exact sign test, and Wilcoxon "
+                "signed-rank on log10 precision (both scale-free; wins = closer to the optimum):",
                 "",
             ]
-            lines += ["| optimiser | wins | ties | losses | p |", "|---|---|---|---|---|"]
-            for o, w, t, lo, p in wilcoxon(s, suite):
-                lines.append(f"| {o} | {w} | {t} | {lo} | {'—' if p is None else f'{p:.3g}'} |")
+            lines += [
+                "| optimiser | wins | ties | losses | sign test p | Wilcoxon (log) p |",
+                "|---|---|---|---|---|---|",
+            ]
+            for o, w, t, lo, sp, lp in paired(s, suite):
+                cells = ["—" if v is None else f"{v:.3g}" for v in (sp, lp)]
+                lines.append(f"| {o} | {w} | {t} | {lo} | {cells[0]} | {cells[1]} |")
     lines += ["", "## Head-start check", ""]
     if s["head_starts"]:
         lines += [

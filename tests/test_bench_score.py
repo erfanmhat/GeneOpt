@@ -115,11 +115,17 @@ def test_report_shows_configuration_gate_and_flags():
         assert part in text
 
 
-def test_wilcoxon_reports_counts_and_a_p_value():
+def test_paired_tests_report_counts_and_scale_free_p_values():
     pytest.importorskip("scipy")
-    s = score.score(suite_records(9, losses=1))
-    [(o, wins, ties, losses, p)] = score.wilcoxon(s, "mixint")
-    assert (o, wins, ties, losses) == ("random", 9, 0, 1) and 0 < p < 0.05
+    rs = suite_records(9, losses=1)
+    [(o, wins, ties, losses, sign_p, log_p)] = score.paired(score.score(rs), "mixint")
+    assert (o, wins, ties, losses) == ("random", 9, 0, 1)
+    assert sign_p == pytest.approx(0.021484375) and 0 < log_p < 0.05  # exact binomial: 2 * 11 / 1024
+    for r in rs:  # one function a million times larger: raw-difference tests would change, these must not
+        if r["function"] == 10:
+            r["best"] *= 1e6
+            r["trace"] = [(e, v * 1e6) for e, v in r["trace"]]
+    assert score.paired(score.score(rs), "mixint") == [(o, wins, ties, losses, sign_p, log_p)]
 
 
 def test_compact_sizes():
